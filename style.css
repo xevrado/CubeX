@@ -171,15 +171,13 @@ body {
   border-radius: 14px;
   background: conic-gradient(
     from var(--btn-angle, 0deg),
-    #4f8ef7,
-    #a855f7,
-    #ec4899,
-    #eab308,
-    #22c55e,
-    #06b6d4,
-    #4f8ef7
+    #1e3a8a, /* Koyu Lacivert */
+    #4c1d95, /* Koyu Mor */
+    #1e1b4b, /* Gece Mavisi */
+    #312e81, /* İndigo */
+    #1e3a8a
   );
-  animation: rotateBorder 2.5s linear infinite;
+  animation: rotateBorder 3s linear infinite;
   pointer-events: none;
 }
 
@@ -201,13 +199,13 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 7px 14px;
+  padding: 7px 16px;
   border-radius: 12px;
-  background: rgba(10, 10, 26, 0.92);
-  color: white;
+  background: #0a0a1a;
+  color: #94a3b8; /* Mat Gümüş/Gri yazı */
   font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -215,21 +213,19 @@ body {
 .download-btn::after {
   content: '';
   position: absolute;
-  inset: -4px;
+  inset: -2px;
   border-radius: 18px;
   background: conic-gradient(
     from var(--btn-angle, 0deg),
-    rgba(79, 142, 247, 0.4),
-    rgba(168, 85, 247, 0.4),
-    rgba(236, 72, 153, 0.4),
-    rgba(234, 179, 8, 0.4),
-    rgba(34, 197, 94, 0.4),
-    rgba(6, 182, 212, 0.4),
-    rgba(79, 142, 247, 0.4)
+    rgba(30, 58, 138, 0.3),
+    rgba(76, 29, 149, 0.3),
+    rgba(30, 27, 75, 0.3),
+    rgba(49, 46, 129, 0.3),
+    rgba(30, 58, 138, 0.3)
   );
-  filter: blur(8px);
+  filter: blur(6px);
   z-index: -1;
-  animation: rotateBorder 2.5s linear infinite;
+  animation: rotateBorder 3s linear infinite;
   pointer-events: none;
 }
 
