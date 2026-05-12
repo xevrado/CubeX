@@ -157,6 +157,12 @@ body {
   text-decoration: none;
   cursor: pointer;
   overflow: hidden;
+  transition: transform 0.2s ease;
+  z-index: 10;
+}
+
+.download-btn:hover {
+  transform: scale(1.05);
 }
 
 .download-btn-border {
@@ -174,6 +180,7 @@ body {
     #4f8ef7
   );
   animation: rotateBorder 2.5s linear infinite;
+  pointer-events: none;
 }
 
 @keyframes rotateBorder {
@@ -202,6 +209,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.3px;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .download-btn::after {
@@ -222,6 +230,7 @@ body {
   filter: blur(8px);
   z-index: -1;
   animation: rotateBorder 2.5s linear infinite;
+  pointer-events: none;
 }
 
 .download-btn:active .download-btn-content {
