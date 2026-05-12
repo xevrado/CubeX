@@ -1,0 +1,799 @@
+/* =========================================
+   CUBEX — Full Game Logic
+   ========================================= */
+
+// ---- Constants ----
+const BOARD_SIZE = 8;
+const COLORS = 8; // color-0 … color-7
+
+// ---- Piece Shapes (relative coords [row, col]) ----
+const SHAPES = [
+  // ── Singles / small ──
+  { cells: [[0,0]], name: '1x1' },
+
+  // ── Lines ──
+  { cells: [[0,0],[0,1]], name: '1x2' },
+  { cells: [[0,0],[1,0]], name: '2x1' },
+  { cells: [[0,0],[0,1],[0,2]], name: '1x3' },
+  { cells: [[0,0],[1,0],[2,0]], name: '3x1' },
+  { cells: [[0,0],[0,1],[0,2],[0,3]], name: '1x4' },
+  { cells: [[0,0],[1,0],[2,0],[3,0]], name: '4x1' },
+  { cells: [[0,0],[0,1],[0,2],[0,3],[0,4]], name: '1x5' },
+  { cells: [[0,0],[1,0],[2,0],[3,0],[4,0]], name: '5x1' },
+
+  // ── Squares ──
+  { cells: [[0,0],[0,1],[1,0],[1,1]], name: '2x2' },
+  { cells: [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]], name: '3x3' },
+
+  // ── Rectangles ──
+  { cells: [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]], name: '2x3' },
+  { cells: [[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]], name: '3x2' },
+
+  // ── L shapes ──
+  { cells: [[0,0],[1,0],[1,1]], name: 'L1' },
+  { cells: [[0,0],[0,1],[1,0]], name: 'L2' },
+  { cells: [[0,0],[0,1],[1,1]], name: 'L3' },
+  { cells: [[0,0],[1,0],[1,-1]], name: 'L4' },
+
+  // ── Big L shapes ──
+  { cells: [[0,0],[1,0],[2,0],[2,1],[2,2]], name: 'BigL1' },
+  { cells: [[0,0],[0,1],[0,2],[1,0],[2,0]], name: 'BigL2' },
+  { cells: [[0,0],[0,1],[0,2],[1,2],[2,2]], name: 'BigL3' },
+  { cells: [[0,0],[1,0],[2,0],[2,-1],[2,-2]], name: 'BigL4' },
+
+  // ── J shapes (mirror of L) ──
+  { cells: [[0,0],[0,1],[1,0],[2,0]], name: 'J1' },
+  { cells: [[0,0],[1,0],[1,1],[1,2]], name: 'J2' },
+  { cells: [[0,0],[0,1],[0,2],[1,0]], name: 'J3' },
+  { cells: [[0,0],[0,1],[0,2],[1,2]], name: 'J4' },
+
+  // ── T shapes ──
+  { cells: [[0,0],[0,1],[0,2],[1,1]], name: 'T1' },
+  { cells: [[0,0],[1,0],[1,1],[2,0]], name: 'T2' },
+  { cells: [[0,1],[1,0],[1,1],[1,2]], name: 'T3' },
+  { cells: [[0,0],[1,0],[1,-1],[2,0]], name: 'T4' },
+
+  // ── Z / S shapes ──
+  { cells: [[0,0],[0,1],[1,1],[1,2]], name: 'Z1' },
+  { cells: [[0,0],[1,0],[1,-1],[2,-1]], name: 'Z2' },
+  { cells: [[0,0],[0,1],[1,-1],[1,0]], name: 'S1' },
+  { cells: [[0,0],[1,0],[1,1],[2,1]], name: 'S2' },
+
+  // ── Plus / Cross ──
+  { cells: [[0,1],[1,0],[1,1],[1,2],[2,1]], name: 'Plus' },
+  { cells: [[0,0],[1,0],[1,1]], name: 'SmallCross' },
+
+  // ── Corner / Angle shapes ──
+  { cells: [[0,0],[0,1],[1,0]], name: 'Corner1' },
+  { cells: [[0,0],[0,1],[1,1]], name: 'Corner2' },
+  { cells: [[0,0],[1,0],[1,1]], name: 'Corner3' },
+  { cells: [[0,1],[1,0],[1,1]], name: 'Corner4' },
+
+  // ── Staircase / Step shapes ──
+  { cells: [[0,0],[1,0],[1,1],[2,1],[2,2]], name: 'Stairs1' },
+  { cells: [[0,2],[1,1],[1,2],[2,0],[2,1]], name: 'Stairs2' },
+  { cells: [[0,0],[0,1],[1,1],[1,2],[2,2]], name: 'Stairs3' },
+
+  // ── Diagonal pair ──
+  { cells: [[0,0],[1,1]], name: 'Diag1' },
+  { cells: [[0,1],[1,0]], name: 'Diag2' },
+
+  // ── H shape ──
+  { cells: [[0,0],[0,2],[1,0],[1,1],[1,2],[2,0],[2,2]], name: 'H-shape' },
+
+  // ── Small T variants ──
+  { cells: [[0,0],[0,1],[0,2],[1,0]], name: 'SmallT1' },
+  { cells: [[0,0],[0,1],[0,2],[1,2]], name: 'SmallT2' },
+
+  // ── Thick bar ──
+  { cells: [[0,0],[0,1],[1,0],[1,1],[2,0],[2,1],[3,0],[3,1]], name: '4x2' },
+];
+
+// ---- State ----
+let board = [];          // 8x8, null or colorIndex
+let score = 0;
+let bestScore = 0;
+let level = 1;
+let combo = 0;
+let currentPieces = [];  // [{shape, color, used}]
+let soundOn = true;
+let dragState = null;    // active drag info
+
+// ---- Audio (Web Audio API — tiny synth) ----
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function playTone(freq, duration, type = 'sine', vol = 0.12) {
+  if (!soundOn || !audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+
+function sfxPlace()   { playTone(520, 0.12, 'sine', 0.15); playTone(660, 0.1, 'sine', 0.10); }
+function sfxClear()   { playTone(780, 0.15, 'triangle', 0.18); playTone(1040, 0.2, 'sine', 0.12); }
+function sfxCombo()   { playTone(880, 0.1, 'sine', 0.2); setTimeout(() => playTone(1100, 0.15, 'sine', 0.18), 80); setTimeout(() => playTone(1320, 0.2, 'sine', 0.15), 160); }
+function sfxGameOver(){ playTone(300, 0.3, 'sawtooth', 0.1); setTimeout(() => playTone(200, 0.4, 'sawtooth', 0.08), 200); }
+function sfxClick()   { playTone(600, 0.06, 'sine', 0.08); }
+
+// ---- DOM refs ----
+const boardEl        = document.getElementById('gameBoard');
+const scoreEl        = document.getElementById('scoreDisplay');
+const bestEl         = document.getElementById('bestDisplay');
+const levelEl        = document.getElementById('levelDisplay');
+const comboEl        = document.getElementById('comboCount');
+const comboBadge     = document.getElementById('comboDisplay');
+const trayEl         = document.getElementById('pieceTray');
+const clearFlashEl   = document.getElementById('clearFlash');
+const scorePopupEl   = document.getElementById('scorePopup');
+const gameOverOverlay= document.getElementById('gameOverOverlay');
+const helpOverlay    = document.getElementById('helpOverlay');
+const soundBtn       = document.getElementById('soundBtn');
+const helpBtn        = document.getElementById('helpBtn');
+const restartBtn     = document.getElementById('restartBtn');
+const playAgainBtn   = document.getElementById('playAgainBtn');
+const shareBtn       = document.getElementById('shareBtn');
+const closeHelpBtn   = document.getElementById('closeHelpBtn');
+const finalScoreEl   = document.getElementById('finalScore');
+const finalBestEl    = document.getElementById('finalBest');
+const finalLevelEl   = document.getElementById('finalLevel');
+
+// ---- Initialize Particles ----
+function createParticles() {
+  const container = document.getElementById('bgParticles');
+  const colors = ['#4f8ef7','#a855f7','#ec4899','#06b6d4','#22c55e','#eab308'];
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 4 + Math.random() * 12;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.animationDuration = (8 + Math.random() * 15) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    container.appendChild(p);
+  }
+}
+
+// ---- Board Logic ----
+function createBoard() {
+  board = [];
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    board.push(new Array(BOARD_SIZE).fill(null));
+  }
+}
+
+function renderBoard() {
+  boardEl.innerHTML = '';
+  // The board now uses CSS sizing, so we don't need to set width/height here.
+  // But we need to know the cell size for drag-drop calculations.
+  
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      // Let CSS handle cell size (1fr in grid)
+      if (board[r][c] !== null) {
+        cell.classList.add('filled', 'color-' + board[r][c]);
+      }
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function getCellEl(r, c) {
+  return boardEl.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+}
+
+// ---- Piece Generation ----
+function normalizeCells(cells) {
+  const minR = Math.min(...cells.map(c => c[0]));
+  const minC = Math.min(...cells.map(c => c[1]));
+  return cells.map(([r, c]) => [r - minR, c - minC]);
+}
+
+function makePieceFromShape(shape) {
+  const color = Math.floor(Math.random() * COLORS);
+  const cells = normalizeCells(shape.cells);
+  return { cells, color, used: false, name: shape.name };
+}
+
+function randomPiece() {
+  const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  return makePieceFromShape(shape);
+}
+
+// Tahtanın mevcut durumuna göre yerleştirilebilecek şekilleri filtrele
+function getFittingShapes() {
+  const fitting = [];
+  for (const shape of SHAPES) {
+    const cells = normalizeCells(shape.cells);
+    // Bu şekil tahtaya herhangi bir yere sığabiliyor mu?
+    let fits = false;
+    for (let r = 0; r < BOARD_SIZE && !fits; r++) {
+      for (let c = 0; c < BOARD_SIZE && !fits; c++) {
+        if (canPlace(cells, r, c)) fits = true;
+      }
+    }
+    if (fits) fitting.push(shape);
+  }
+  return fitting;
+}
+
+function generatePieces() {
+  // Tahtaya sığabilen şekilleri bul
+  const fittingShapes = getFittingShapes();
+  
+  // Eğer hiç sığan şekil yoksa, oyun zaten bitecek — küçük şekilleri dene
+  if (fittingShapes.length === 0) {
+    currentPieces = [randomPiece(), randomPiece(), randomPiece()];
+    return;
+  }
+  
+  // Seviyeye göre büyük parçaları tercih et
+  const pickFitting = () => {
+    // Yüksek seviyelerde büyük parçalara ağırlık ver
+    const minPreferredSize = Math.min(3 + Math.floor(level / 2), 7);
+    
+    // Büyük parçaları filtrele
+    const bigShapes = fittingShapes.filter(s => {
+      const cells = normalizeCells(s.cells);
+      return cells.length >= minPreferredSize;
+    });
+    
+    // Seviye arttıkça büyük parça gelme ihtimali artar
+    const bigChance = Math.min(0.3 + level * 0.08, 0.75);
+    
+    if (bigShapes.length > 0 && Math.random() < bigChance) {
+      const shape = bigShapes[Math.floor(Math.random() * bigShapes.length)];
+      return makePieceFromShape(shape);
+    }
+    
+    // Normal rastgele seçim
+    const shape = fittingShapes[Math.floor(Math.random() * fittingShapes.length)];
+    return makePieceFromShape(shape);
+  };
+  
+  currentPieces = [pickFitting(), pickFitting(), pickFitting()];
+}
+
+function renderTray() {
+  for (let i = 0; i < 3; i++) {
+    const slot = document.getElementById('slot' + i);
+    slot.innerHTML = '';
+    slot.classList.remove('used');
+    slot.dataset.pieceIndex = i;
+
+    // Clean up old listeners to prevent duplicates
+    const newSlot = slot.cloneNode(false);
+    slot.parentNode.replaceChild(newSlot, slot);
+
+    const piece = currentPieces[i];
+    if (!piece || piece.used) {
+      newSlot.classList.add('used');
+      continue;
+    }
+
+    const maxR = Math.max(...piece.cells.map(c => c[0])) + 1;
+    const maxC = Math.max(...piece.cells.map(c => c[1])) + 1;
+
+    const grid = document.createElement('div');
+    grid.className = 'piece-preview';
+    grid.style.gridTemplateColumns = `repeat(${maxC}, 18px)`;
+    grid.style.gridTemplateRows = `repeat(${maxR}, 18px)`;
+
+    // Create cells
+    const set = new Set(piece.cells.map(c => c[0] + ',' + c[1]));
+    for (let r = 0; r < maxR; r++) {
+      for (let c = 0; c < maxC; c++) {
+        const cell = document.createElement('div');
+        if (set.has(r + ',' + c)) {
+          cell.className = 'piece-cell color-' + piece.color;
+        } else {
+          cell.style.visibility = 'hidden';
+        }
+        grid.appendChild(cell);
+      }
+    }
+
+    newSlot.appendChild(grid);
+
+    // Touch / Mouse events on the WHOLE slot for easier pickup
+    newSlot.addEventListener('touchstart', onDragStart, { passive: false });
+    newSlot.addEventListener('mousedown', onDragStart);
+  }
+}
+
+// ---- Placement Logic ----
+function canPlace(cells, startR, startC) {
+  for (const [dr, dc] of cells) {
+    const r = startR + dr;
+    const c = startC + dc;
+    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) return false;
+    if (board[r][c] !== null) return false;
+  }
+  return true;
+}
+
+function placePiece(piece, startR, startC) {
+  for (const [dr, dc] of piece.cells) {
+    board[startR + dr][startC + dc] = piece.color;
+  }
+}
+
+function canPlaceAnywhere(piece) {
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (canPlace(piece.cells, r, c)) return true;
+    }
+  }
+  return false;
+}
+
+// ---- Clear Lines ----
+function checkAndClear() {
+  const rowsToClear = [];
+  const colsToClear = [];
+
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    if (board[r].every(c => c !== null)) rowsToClear.push(r);
+  }
+  for (let c = 0; c < BOARD_SIZE; c++) {
+    let full = true;
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      if (board[r][c] === null) { full = false; break; }
+    }
+    if (full) colsToClear.push(c);
+  }
+
+  const linesCleared = rowsToClear.length + colsToClear.length;
+  if (linesCleared === 0) {
+    combo = 0;
+    comboEl.textContent = 'x1';
+    comboBadge.textContent = '';
+    return 0;
+  }
+
+  combo++;
+
+  // Animate explode
+  const cellsToExplode = new Set();
+  for (const r of rowsToClear) {
+    for (let c = 0; c < BOARD_SIZE; c++) cellsToExplode.add(r + ',' + c);
+  }
+  for (const c of colsToClear) {
+    for (let r = 0; r < BOARD_SIZE; r++) cellsToExplode.add(r + ',' + c);
+  }
+
+  cellsToExplode.forEach(key => {
+    const [r, c] = key.split(',').map(Number);
+    const el = getCellEl(r, c);
+    if (el) el.classList.add('explode');
+  });
+
+  // Flash effect
+  clearFlashEl.classList.remove('flash');
+  void clearFlashEl.offsetWidth;
+  clearFlashEl.classList.add('flash');
+
+  // Clear board data after animation
+  setTimeout(() => {
+    cellsToExplode.forEach(key => {
+      const [r, c] = key.split(',').map(Number);
+      board[r][c] = null;
+    });
+    renderBoard();
+  }, 350);
+
+  // Score
+  let points = linesCleared * 10 * BOARD_SIZE;
+  if (combo > 1) {
+    points = Math.floor(points * (1 + combo * 0.5));
+    sfxCombo();
+    comboBadge.textContent = '🔥 COMBO x' + combo + '!';
+  } else {
+    sfxClear();
+    comboBadge.textContent = '';
+  }
+
+  comboEl.textContent = 'x' + Math.max(1, combo);
+
+  addScore(points);
+  showScorePopup(points);
+
+  return linesCleared;
+}
+
+function addScore(pts) {
+  score += pts;
+  scoreEl.textContent = score;
+  scoreEl.classList.remove('bump');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('bump');
+  setTimeout(() => scoreEl.classList.remove('bump'), 150);
+
+  // Level — artan eşikler (her seviye daha uzun sürer)
+  // Seviye 1: 0, Seviye 2: 500, Seviye 3: 1200, Seviye 4: 2100, Seviye 5: 3200...
+  const getLevel = (s) => {
+    let lvl = 1;
+    let threshold = 500;
+    let remaining = s;
+    while (remaining >= threshold) {
+      remaining -= threshold;
+      lvl++;
+      threshold = 500 + (lvl - 1) * 400; // Her seviye 400 puan daha fazla gerektirir
+    }
+    return lvl;
+  };
+  level = getLevel(score);
+  levelEl.textContent = level;
+
+  // Best
+  if (score > bestScore) {
+    bestScore = score;
+    bestEl.textContent = bestScore;
+    localStorage.setItem('cubex_best', bestScore);
+  }
+}
+
+function showScorePopup(pts) {
+  scorePopupEl.textContent = '+' + pts;
+  scorePopupEl.style.color = combo > 1 ? '#eab308' : '#4f8ef7';
+  scorePopupEl.style.left = '50%';
+  scorePopupEl.style.top = '40%';
+  scorePopupEl.className = 'score-popup show';
+  setTimeout(() => { scorePopupEl.className = 'score-popup'; }, 1200);
+}
+
+// ---- Drag & Drop ----
+let ghostEl = null;
+
+function onDragStart(e) {
+  e.preventDefault();
+  initAudio();
+
+  const slot = e.currentTarget;
+  const idx = parseInt(slot.dataset.pieceIndex);
+  const piece = currentPieces[idx];
+  if (!piece || piece.used) return;
+
+  sfxClick();
+
+  // Calculate current board cell size for perfect ghost matching
+  const rect = boardEl.getBoundingClientRect();
+  const padding = 6;
+  const gap = 3;
+  const cellSize = (rect.width - padding * 2 - gap * (BOARD_SIZE - 1)) / BOARD_SIZE;
+
+  ghostEl = document.createElement('div');
+  ghostEl.className = 'drag-ghost';
+  const maxR = Math.max(...piece.cells.map(c => c[0])) + 1;
+  const maxC = Math.max(...piece.cells.map(c => c[1])) + 1;
+  
+  // Use exact board cell size
+  ghostEl.style.gridTemplateColumns = `repeat(${maxC}, ${cellSize}px)`;
+  ghostEl.style.gridTemplateRows = `repeat(${maxR}, ${cellSize}px)`;
+  ghostEl.style.gap = `${gap}px`;
+
+  const set = new Set(piece.cells.map(c => c[0] + ',' + c[1]));
+  for (let r = 0; r < maxR; r++) {
+    for (let c = 0; c < maxC; c++) {
+      const cell = document.createElement('div');
+      if (set.has(r + ',' + c)) {
+        cell.className = 'piece-cell color-' + piece.color;
+        // Match the board cell look
+        cell.style.width = cellSize + 'px';
+        cell.style.height = cellSize + 'px';
+      } else {
+        cell.style.visibility = 'hidden';
+      }
+      ghostEl.appendChild(cell);
+    }
+  }
+  document.body.appendChild(ghostEl);
+
+  // Position ghost
+  const touch = e.touches ? e.touches[0] : e;
+  moveGhost(touch.clientX, touch.clientY);
+
+  dragState = { pieceIndex: idx, piece };
+  slot.classList.add('used');
+
+  // Bind move & end
+  if (e.touches) {
+    document.addEventListener('touchmove', onDragMove, { passive: false });
+    document.addEventListener('touchend', onDragEnd);
+    document.addEventListener('touchcancel', onDragCancel);
+  } else {
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+  }
+}
+
+function moveGhost(x, y) {
+  if (!ghostEl) return;
+  const offsetY = 100;
+  ghostEl.style.left = x + 'px';
+  ghostEl.style.top = (y - offsetY) + 'px';
+}
+
+function onDragMove(e) {
+  e.preventDefault();
+  if (!dragState) return;
+  const touch = e.touches ? e.touches[0] : e;
+  moveGhost(touch.clientX, touch.clientY);
+  highlightBoard(touch.clientX, touch.clientY);
+}
+
+function onDragEnd(e) {
+  if (!dragState) return;
+  const touch = e.changedTouches ? e.changedTouches[0] : e;
+  const target = getBoardPosition(touch.clientX, touch.clientY);
+  
+  clearHighlights();
+
+  if (target && canPlace(dragState.piece.cells, target.row, target.col)) {
+    // Place piece
+    placePiece(dragState.piece, target.row, target.col);
+    currentPieces[dragState.pieceIndex].used = true;
+    sfxPlace();
+
+    // Add small points for placing
+    addScore(dragState.piece.cells.length);
+
+    renderBoard();
+
+    // Check clears
+    setTimeout(() => {
+      checkAndClear();
+
+      // Check if all 3 used → new set
+      if (currentPieces.every(p => p.used)) {
+        generatePieces();
+      }
+      renderTray();
+
+      // Check game over
+      setTimeout(() => checkGameOver(), 400);
+    }, 50);
+
+  } else {
+    // Return piece
+    currentPieces[dragState.pieceIndex].used = false;
+    renderTray();
+  }
+
+  cleanupDrag();
+}
+
+function onDragCancel() {
+  if (!dragState) return;
+  currentPieces[dragState.pieceIndex].used = false;
+  renderTray();
+  clearHighlights();
+  cleanupDrag();
+}
+
+function cleanupDrag() {
+  if (ghostEl) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
+  dragState = null;
+  document.removeEventListener('touchmove', onDragMove);
+  document.removeEventListener('touchend', onDragEnd);
+  document.removeEventListener('touchcancel', onDragCancel);
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+}
+
+function getBoardPosition(clientX, clientY) {
+  if (!dragState) return null;
+  
+  const rect = boardEl.getBoundingClientRect();
+  const padding = 6;
+  const gap = 3;
+  const cellSize = (rect.width - padding * 2 - gap * (BOARD_SIZE - 1)) / BOARD_SIZE;
+
+  const offsetY = 100; 
+  
+  // The logic point is the CENTER of the piece
+  const centerX = clientX;
+  const centerY = clientY - offsetY;
+
+  // Calculate the piece's dimensions to find the top-left cell's position
+  const maxR = Math.max(...dragState.piece.cells.map(c => c[0])) + 1;
+  const maxC = Math.max(...dragState.piece.cells.map(c => c[1])) + 1;
+  const pieceW = maxC * cellSize + (maxC - 1) * gap;
+  const pieceH = maxR * cellSize + (maxR - 1) * gap;
+
+  // Top-left of the piece relative to the board
+  const topLeftX = centerX - pieceW / 2 - rect.left - padding;
+  const topLeftY = centerY - pieceH / 2 - rect.top - padding;
+
+  // Find the closest grid row/col
+  const col = Math.round(topLeftX / (cellSize + gap));
+  const row = Math.round(topLeftY / (cellSize + gap));
+
+  if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return null;
+  return { row, col };
+}
+
+function highlightBoard(clientX, clientY) {
+  clearHighlights();
+  if (!dragState) return;
+
+  const target = getBoardPosition(clientX, clientY);
+  if (!target) return;
+
+  const valid = canPlace(dragState.piece.cells, target.row, target.col);
+
+  for (const [dr, dc] of dragState.piece.cells) {
+    const r = target.row + dr;
+    const c = target.col + dc;
+    if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+      const el = getCellEl(r, c);
+      if (el) {
+        el.classList.add(valid ? 'highlight-valid' : 'highlight-invalid');
+      }
+    }
+  }
+
+  // Geçerli yerleşimse, kırılacak satır/sütunları vurgula
+  if (valid) {
+    highlightLinesToClear(dragState.piece, target.row, target.col);
+  }
+}
+
+// Parça yerleştirildiğinde kırılacak satır/sütunları tespit et ve vurgula
+function highlightLinesToClear(piece, startR, startC) {
+  // Tahtanın geçici kopyasını oluştur
+  const tempBoard = board.map(row => [...row]);
+  for (const [dr, dc] of piece.cells) {
+    tempBoard[startR + dr][startC + dc] = piece.color;
+  }
+
+  // Kırılacak satırları bul
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    if (tempBoard[r].every(c => c !== null)) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        const el = getCellEl(r, c);
+        if (el) el.classList.add('almost-ready');
+      }
+    }
+  }
+
+  // Kırılacak sütunları bul
+  for (let c = 0; c < BOARD_SIZE; c++) {
+    let full = true;
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      if (tempBoard[r][c] === null) { full = false; break; }
+    }
+    if (full) {
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        const el = getCellEl(r, c);
+        if (el) el.classList.add('almost-ready');
+      }
+    }
+  }
+}
+
+function clearHighlights() {
+  boardEl.querySelectorAll('.highlight-valid, .highlight-invalid, .almost-ready').forEach(el => {
+    el.classList.remove('highlight-valid', 'highlight-invalid', 'almost-ready');
+  });
+}
+
+// ---- Game Over ----
+function checkGameOver() {
+  const remaining = currentPieces.filter(p => !p.used);
+  if (remaining.length === 0) return;
+
+  const canAnyPlace = remaining.some(p => canPlaceAnywhere(p));
+  if (!canAnyPlace) {
+    gameOver();
+  }
+}
+
+function gameOver() {
+  sfxGameOver();
+  finalScoreEl.textContent = score;
+  finalBestEl.textContent = bestScore;
+  finalLevelEl.textContent = level;
+  gameOverOverlay.classList.add('active');
+}
+
+// ---- New Game ----
+function newGame() {
+  score = 0;
+  level = 1;
+  combo = 0;
+  scoreEl.textContent = '0';
+  levelEl.textContent = '1';
+  comboEl.textContent = 'x1';
+  comboBadge.textContent = '';
+  bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
+  bestEl.textContent = bestScore;
+  gameOverOverlay.classList.remove('active');
+  helpOverlay.classList.remove('active');
+  createBoard();
+  renderBoard();
+  generatePieces();
+  renderTray();
+}
+
+// ---- Button Events ----
+soundBtn.addEventListener('click', () => {
+  initAudio();
+  soundOn = !soundOn;
+  soundBtn.textContent = soundOn ? '🔊' : '🔇';
+  sfxClick();
+});
+
+helpBtn.addEventListener('click', () => {
+  sfxClick();
+  helpOverlay.classList.add('active');
+});
+
+closeHelpBtn.addEventListener('click', () => {
+  sfxClick();
+  helpOverlay.classList.remove('active');
+});
+
+restartBtn.addEventListener('click', () => {
+  sfxClick();
+  if (score > 0 && confirm('Oyunu yeniden başlatmak istiyor musun?')) {
+    newGame();
+  } else if (score === 0) {
+    newGame();
+  }
+});
+
+playAgainBtn.addEventListener('click', () => {
+  sfxClick();
+  newGame();
+});
+
+shareBtn.addEventListener('click', () => {
+  sfxClick();
+  const text = `🟦 CubeX 🟦\n🏆 Puan: ${score}\n⭐ Seviye: ${level}\n\nSen de dene!`;
+  if (navigator.share) {
+    navigator.share({ title: 'CubeX', text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => {
+      shareBtn.textContent = '✅ Kopyalandı!';
+      setTimeout(() => { shareBtn.textContent = '📤 Paylaş'; }, 2000);
+    });
+  }
+});
+
+// Prevent scroll bounce on iOS
+document.body.addEventListener('touchmove', e => {
+  if (dragState) e.preventDefault();
+}, { passive: false });
+
+// ---- Window resize ----
+window.addEventListener('resize', () => {
+  renderBoard();
+});
+
+// ---- Init ----
+createParticles();
+newGame();

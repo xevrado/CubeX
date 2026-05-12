@@ -1,0 +1,22 @@
+{
+  "short_name": "CubeX",
+  "name": "CubeX – Premium Puzzle Game",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "description": "CubeX is a premium block puzzle game.",
+  "orientation": "portrait-primary"
+}

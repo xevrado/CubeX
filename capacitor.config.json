@@ -1,0 +1,11 @@
+{
+  "appId": "com.xevrado.cubex",
+  "appName": "CubeX",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0a0a1a"
+  }
+}

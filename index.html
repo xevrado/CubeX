@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0a0a1a" />
+  <title>CubeX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- Background particles -->
+  <div class="bg-particles" id="bgParticles"></div>
+
+  <!-- Main App Container -->
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="game-header">
+      <div class="header-left">
+        <button class="icon-btn" id="restartBtn" title="Yeniden Başla">↺</button>
+        <span class="app-title">CubeX</span>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" id="soundBtn" title="Ses">🔊</button>
+        <button class="icon-btn" id="helpBtn" title="Yardım">❓</button>
+      </div>
+    </header>
+
+    <!-- Score Section -->
+    <section class="score-section">
+      <div class="score-card" id="scoreCard">
+        <div class="score-label">PUAN</div>
+        <div class="score-value" id="scoreDisplay">0</div>
+        <div class="score-combo" id="comboDisplay"></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">EN İYİ</div>
+          <div class="stat-value" id="bestDisplay">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">SEVİYE</div>
+          <div class="stat-value" id="levelDisplay">1</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">COMBO</div>
+          <div class="stat-value" id="comboCount">x1</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game Board -->
+    <section class="board-section">
+      <div class="board-container">
+        <div class="board-glow"></div>
+        <div class="game-board" id="gameBoard"></div>
+        <div class="clear-flash" id="clearFlash"></div>
+      </div>
+    </section>
+
+    <!-- Piece Tray -->
+    <section class="tray-section">
+      <div class="piece-tray" id="pieceTray">
+        <div class="piece-slot" id="slot0"></div>
+        <div class="piece-slot" id="slot1"></div>
+        <div class="piece-slot" id="slot2"></div>
+      </div>
+    </section>
+
+
+
+  </div>
+
+  <!-- Game Over Overlay -->
+  <div class="overlay" id="gameOverOverlay">
+    <div class="overlay-card game-over-card">
+      <div class="overlay-emoji">😵</div>
+      <h2 class="overlay-title">Oyun Bitti!</h2>
+      <p class="overlay-sub">Yerleştirecek yer kalmadı</p>
+      <div class="result-grid">
+        <div class="result-item">
+          <span class="result-label">Puan</span>
+          <span class="result-value" id="finalScore">0</span>
+        </div>
+        <div class="result-item">
+          <span class="result-label">En İyi</span>
+          <span class="result-value" id="finalBest">0</span>
+        </div>
+        <div class="result-item">
+          <span class="result-label">Seviye</span>
+          <span class="result-value" id="finalLevel">1</span>
+        </div>
+      </div>
+      <button class="overlay-btn primary-btn" id="playAgainBtn">🎮 Tekrar Oyna</button>
+      <button class="overlay-btn secondary-btn" id="shareBtn">📤 Paylaş</button>
+    </div>
+  </div>
+
+  <!-- Help Overlay -->
+  <div class="overlay" id="helpOverlay">
+    <div class="overlay-card help-card">
+      <div class="overlay-emoji">📖</div>
+      <h2 class="overlay-title">Nasıl Oynanır?</h2>
+      <div class="help-steps">
+        <div class="help-step">
+          <span class="step-num">1</span>
+          <span>Aşağıdaki parçaları sürükle ve tahtaya bırak</span>
+        </div>
+        <div class="help-step">
+          <span class="step-num">2</span>
+          <span>Satır veya sütun doldurunca patlayarak puan kazanırsın</span>
+        </div>
+        <div class="help-step">
+          <span class="step-num">3</span>
+          <span>Birden fazla satır/sütun aynı anda temizlersen bonus combo!</span>
+        </div>
+        <div class="help-step">
+          <span class="step-num">4</span>
+          <span>Hiçbir parça sığmazsa oyun biter!</span>
+        </div>
+      </div>
+      <button class="overlay-btn primary-btn" id="closeHelpBtn">Anladım! 👍</button>
+    </div>
+  </div>
+
+  <!-- Floating Score Popup -->
+  <div class="score-popup" id="scorePopup"></div>
+
+  <script src="game.js"></script>
+</body>
+
+</html>
