@@ -156,7 +156,8 @@ const finalLevelEl   = document.getElementById('finalLevel');
 function createParticles() {
   const container = document.getElementById('bgParticles');
   const colors = ['#4f8ef7','#a855f7','#ec4899','#06b6d4','#22c55e','#eab308'];
-  for (let i = 0; i < 20; i++) {
+  // Parçacık sayısını mobil için azalttık
+  for (let i = 0; i < 8; i++) {
     const p = document.createElement('div');
     p.className = 'particle';
     const size = 4 + Math.random() * 12;
@@ -164,8 +165,9 @@ function createParticles() {
     p.style.height = size + 'px';
     p.style.left = Math.random() * 100 + '%';
     p.style.background = colors[Math.floor(Math.random() * colors.length)];
-    p.style.animationDuration = (8 + Math.random() * 15) + 's';
+    p.style.animationDuration = (10 + Math.random() * 15) + 's';
     p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.transform = 'translate3d(0,0,0)'; // GPU zorlama
     container.appendChild(p);
   }
 }
@@ -534,12 +536,22 @@ function moveGhost(x, y) {
   ghostEl.style.top = (y - offsetY) + 'px';
 }
 
+let lastDragTime = 0;
 function onDragMove(e) {
   e.preventDefault();
   if (!dragState) return;
+  
+  const now = Date.now();
+  if (now - lastDragTime < 16) return; // ~60fps ile sınırla (Throttling)
+  lastDragTime = now;
+
   const touch = e.touches ? e.touches[0] : e;
   moveGhost(touch.clientX, touch.clientY);
-  highlightBoard(touch.clientX, touch.clientY);
+  
+  // RequestAnimationFrame kullanarak render'ı senkronize et
+  requestAnimationFrame(() => {
+    highlightBoard(touch.clientX, touch.clientY);
+  });
 }
 
 function onDragEnd(e) {
