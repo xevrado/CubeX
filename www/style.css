@@ -143,6 +143,90 @@ body {
 .header-right {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+/* ---- Download Button with Rotating Light ---- */
+.download-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.download-btn-border {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: conic-gradient(
+    from var(--btn-angle, 0deg),
+    #4f8ef7,
+    #a855f7,
+    #ec4899,
+    #eab308,
+    #22c55e,
+    #06b6d4,
+    #4f8ef7
+  );
+  animation: rotateBorder 2.5s linear infinite;
+}
+
+@keyframes rotateBorder {
+  to {
+    --btn-angle: 360deg;
+  }
+}
+
+@property --btn-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.download-btn-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px;
+  border-radius: 12px;
+  background: rgba(10, 10, 26, 0.92);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.download-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 18px;
+  background: conic-gradient(
+    from var(--btn-angle, 0deg),
+    rgba(79, 142, 247, 0.4),
+    rgba(168, 85, 247, 0.4),
+    rgba(236, 72, 153, 0.4),
+    rgba(234, 179, 8, 0.4),
+    rgba(34, 197, 94, 0.4),
+    rgba(6, 182, 212, 0.4),
+    rgba(79, 142, 247, 0.4)
+  );
+  filter: blur(8px);
+  z-index: -1;
+  animation: rotateBorder 2.5s linear infinite;
+}
+
+.download-btn:active .download-btn-content {
+  background: rgba(20, 20, 40, 1);
+  transform: scale(0.96);
 }
 
 .icon-btn {

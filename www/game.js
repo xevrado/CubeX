@@ -795,5 +795,15 @@ window.addEventListener('resize', () => {
 });
 
 // ---- Init ----
-createParticles();
-newGame();
+function initApp() {
+  createParticles();
+  newGame();
+  
+  // Uygulama (Capacitor) içindeysek İndir butonunu gizle
+  if (window.Capacitor && window.Capacitor.getPlatform() !== 'web') {
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) downloadBtn.style.display = 'none';
+  }
+}
+
+initApp();
