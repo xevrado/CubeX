@@ -152,6 +152,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 38px;
   padding: 2px;
   border-radius: 14px;
   text-decoration: none;
@@ -159,6 +160,7 @@ body {
   overflow: hidden;
   transition: transform 0.2s ease;
   z-index: 10;
+  box-sizing: border-box;
 }
 
 .download-btn:hover {
@@ -199,12 +201,13 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 7px 16px;
+  height: 34px; /* Border payı ile beraber toplam 38px olması için */
+  padding: 0 16px;
   border-radius: 12px;
   background: #0a0a1a;
-  color: #94a3b8; /* Mat Gümüş/Gri yazı */
+  color: #ffffff; /* Saf Beyaz */
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.5px;
   white-space: nowrap;
   pointer-events: none;
