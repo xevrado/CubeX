@@ -69,17 +69,9 @@ const SHAPES = [
   { cells: [[0,0],[1,0],[1,1]], name: 'Corner3' },
   { cells: [[0,1],[1,0],[1,1]], name: 'Corner4' },
 
-  // ── Staircase / Step shapes ──
-  { cells: [[0,0],[1,0],[1,1],[2,1],[2,2]], name: 'Stairs1' },
-  { cells: [[0,2],[1,1],[1,2],[2,0],[2,1]], name: 'Stairs2' },
-  { cells: [[0,0],[0,1],[1,1],[1,2],[2,2]], name: 'Stairs3' },
-
   // ── Diagonal pair ──
   { cells: [[0,0],[1,1]], name: 'Diag1' },
   { cells: [[0,1],[1,0]], name: 'Diag2' },
-
-  // ── H shape ──
-  { cells: [[0,0],[0,2],[1,0],[1,1],[1,2],[2,0],[2,2]], name: 'H-shape' },
 
   // ── Small T variants ──
   { cells: [[0,0],[0,1],[0,2],[1,0]], name: 'SmallT1' },
@@ -99,6 +91,7 @@ let currentPieces = [];  // [{shape, color, used}]
 let soundOn = true;
 let dragState = null;    // active drag info
 let cellElements = [];   // cached DOM elements for the board
+let highlightedCells = new Set(); // Sadece vurgulanan hücreleri tut (Performans)
 let dragRafId = null;    // rAF id for drag optimization
 
 // ---- Audio (Web Audio API — tiny synth) ----
@@ -148,7 +141,6 @@ const soundBtn       = document.getElementById('soundBtn');
 const helpBtn        = document.getElementById('helpBtn');
 const restartBtn     = document.getElementById('restartBtn');
 const playAgainBtn   = document.getElementById('playAgainBtn');
-const shareBtn       = document.getElementById('shareBtn');
 const closeHelpBtn   = document.getElementById('closeHelpBtn');
 const finalScoreEl   = document.getElementById('finalScore');
 const finalBestEl    = document.getElementById('finalBest');
@@ -178,29 +170,38 @@ function createParticles() {
 function createBoard() {
   board = [];
   cellElements = [];
+  boardEl.innerHTML = ''; // Tahtayı bir kere temizle
   for (let r = 0; r < BOARD_SIZE; r++) {
     board.push(new Array(BOARD_SIZE).fill(null));
-    cellElements.push(new Array(BOARD_SIZE).fill(null));
-  }
-}
-
-function renderBoard() {
-  boardEl.innerHTML = '';
-  // The board now uses CSS sizing, so we don't need to set width/height here.
-  // But we need to know the cell size for drag-drop calculations.
-  
-  for (let r = 0; r < BOARD_SIZE; r++) {
+    const rowElements = [];
     for (let c = 0; c < BOARD_SIZE; c++) {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.dataset.row = r;
       cell.dataset.col = c;
-      // Let CSS handle cell size (1fr in grid)
-      if (board[r][c] !== null) {
-        cell.classList.add('filled', 'color-' + board[r][c]);
-      }
       boardEl.appendChild(cell);
-      cellElements[r][c] = cell; // Cache the DOM element
+      rowElements.push(cell);
+    }
+    cellElements.push(rowElements);
+  }
+}
+
+function renderBoard() {
+  // DOM elementlerini yeniden oluşturmak yerine sadece class'larını güncelle (Performans Optimizasyonu)
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const cell = cellElements[r][c];
+      if (!cell) continue;
+      
+      let newClass = 'cell';
+      if (board[r][c] !== null) {
+        newClass += ' filled color-' + board[r][c];
+      }
+      
+      // Gereksiz reflow'dan kaçınmak için sadece class değiştiyse güncelle
+      if (cell.className !== newClass) {
+        cell.className = newClass;
+      }
     }
   }
 }
@@ -247,8 +248,42 @@ function getFittingShapes() {
   return fitting;
 }
 
+// Boş hücreleri gruplandır (Connected Components)
+function findEmptyClusters() {
+  const visited = Array.from({ length: BOARD_SIZE }, () => new Array(BOARD_SIZE).fill(false));
+  const clusters = [];
+  
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (board[r][c] === null && !visited[r][c]) {
+        const cluster = [];
+        const queue = [[r, c]];
+        visited[r][c] = true;
+        
+        while (queue.length > 0) {
+          const [currR, currC] = queue.shift();
+          cluster.push([currR, currC]);
+          
+          const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+          for (const [dr, dc] of dirs) {
+            const nr = currR + dr;
+            const nc = currC + dc;
+            if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && 
+                board[nr][nc] === null && !visited[nr][nc]) {
+              visited[nr][nc] = true;
+              queue.push([nr, nc]);
+            }
+          }
+        }
+        clusters.push(cluster);
+      }
+    }
+  }
+  return clusters;
+}
+
 function generatePieces() {
-  // Tahtaya sığabilen şekilleri bul
+  const clusters = findEmptyClusters();
   const fittingShapes = getFittingShapes();
   
   // Eğer hiç sığan şekil yoksa, oyun zaten bitecek — küçük şekilleri dene
@@ -256,32 +291,55 @@ function generatePieces() {
     currentPieces = [randomPiece(), randomPiece(), randomPiece()];
     return;
   }
-  
-  // Seviyeye göre büyük parçaları tercih et
-  const pickFitting = () => {
-    // Yüksek seviyelerde büyük parçalara ağırlık ver
-    const minPreferredSize = Math.min(3 + Math.floor(level / 2), 7);
-    
-    // Büyük parçaları filtrele
-    const bigShapes = fittingShapes.filter(s => {
-      const cells = normalizeCells(s.cells);
-      return cells.length >= minPreferredSize;
-    });
-    
-    // Seviye arttıkça büyük parça gelme ihtimali artar
-    const bigChance = Math.min(0.3 + level * 0.08, 0.75);
-    
-    if (bigShapes.length > 0 && Math.random() < bigChance) {
-      const shape = bigShapes[Math.floor(Math.random() * bigShapes.length)];
-      return makePieceFromShape(shape);
+
+  // Her şekil için bir ağırlık hesapla
+  const shapeWeights = SHAPES.map(shape => {
+    // Sığmayan şekillere 0 ağırlık ver
+    if (!fittingShapes.includes(shape)) return 0;
+
+    let weight = 1.0;
+    const normalizedShape = normalizeCells(shape.cells);
+    const shapeKey = normalizedShape.map(c => c.join(',')).sort().join('|');
+
+    // 1. Hole Match: Şekil bir boşluk kümesiyle tam eşleşiyor mu?
+    for (const cluster of clusters) {
+      if (cluster.length === shape.cells.length) {
+        const normalizedCluster = normalizeCells(cluster);
+        const clusterKey = normalizedCluster.map(c => c.join(',')).sort().join('|');
+        if (shapeKey === clusterKey) {
+          weight += 15.0; // Tam eşleşmeye büyük bonus
+        }
+      } else if (cluster.length > shape.cells.length && cluster.length <= 9) {
+        // Şekil bu boşluğa sığıyor mu? (Küçük boşluklar için basit ihtimal artışı)
+        weight += 1.5;
+      }
     }
-    
-    // Normal rastgele seçim
-    const shape = fittingShapes[Math.floor(Math.random() * fittingShapes.length)];
-    return makePieceFromShape(shape);
+
+    // 2. Big Shape Logic: Seviye arttıkça büyük parçalara bonus ver (eski mantık korunuyor)
+    const minPreferredSize = Math.min(3 + Math.floor(level / 2), 7);
+    if (shape.cells.length >= minPreferredSize) {
+      const bigChanceBoost = Math.min(0.5 + level * 0.2, 3.0);
+      weight += bigChanceBoost;
+    }
+
+    return weight;
+  });
+
+  const pickSmart = () => {
+    const totalWeight = shapeWeights.reduce((a, b) => a + b, 0);
+    if (totalWeight <= 0) return randomPiece();
+
+    let rand = Math.random() * totalWeight;
+    for (let i = 0; i < SHAPES.length; i++) {
+      if (shapeWeights[i] > 0) {
+        rand -= shapeWeights[i];
+        if (rand <= 0) return makePieceFromShape(SHAPES[i]);
+      }
+    }
+    return randomPiece();
   };
-  
-  currentPieces = [pickFitting(), pickFitting(), pickFitting()];
+
+  currentPieces = [pickSmart(), pickSmart(), pickSmart()];
 }
 
 function renderTray() {
@@ -677,6 +735,7 @@ function highlightBoard(clientX, clientY) {
       const el = getCellEl(r, c);
       if (el) {
         el.classList.add(valid ? 'highlight-valid' : 'highlight-invalid');
+        highlightedCells.add(el);
       }
     }
   }
@@ -700,7 +759,10 @@ function highlightLinesToClear(piece, startR, startC) {
     if (tempBoard[r].every(c => c !== null)) {
       for (let c = 0; c < BOARD_SIZE; c++) {
         const el = getCellEl(r, c);
-        if (el) el.classList.add('almost-ready');
+        if (el) {
+          el.classList.add('almost-ready');
+          highlightedCells.add(el);
+        }
       }
     }
   }
@@ -714,21 +776,20 @@ function highlightLinesToClear(piece, startR, startC) {
     if (full) {
       for (let r = 0; r < BOARD_SIZE; r++) {
         const el = getCellEl(r, c);
-        if (el) el.classList.add('almost-ready');
+        if (el) {
+          el.classList.add('almost-ready');
+          highlightedCells.add(el);
+        }
       }
     }
   }
 }
 
 function clearHighlights() {
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      const el = cellElements[r][c];
-      if (el) {
-        el.classList.remove('highlight-valid', 'highlight-invalid', 'almost-ready');
-      }
-    }
-  }
+  highlightedCells.forEach(el => {
+    el.classList.remove('highlight-valid', 'highlight-invalid', 'almost-ready');
+  });
+  highlightedCells.clear();
 }
 
 // ---- Game Over ----
@@ -801,19 +862,6 @@ playAgainBtn.addEventListener('click', () => {
   newGame();
 });
 
-shareBtn.addEventListener('click', () => {
-  sfxClick();
-  const text = `🟦 CubeX 🟦\n🏆 Puan: ${score}\n⭐ Seviye: ${level}\n\nSen de dene!`;
-  if (navigator.share) {
-    navigator.share({ title: 'CubeX', text });
-  } else {
-    navigator.clipboard.writeText(text).then(() => {
-      shareBtn.textContent = '✅ Kopyalandı!';
-      setTimeout(() => { shareBtn.textContent = '📤 Paylaş'; }, 2000);
-    });
-  }
-});
-
 // Prevent scroll bounce on iOS
 document.body.addEventListener('touchmove', e => {
   if (dragState) e.preventDefault();
@@ -824,15 +872,55 @@ window.addEventListener('resize', () => {
   renderBoard();
 });
 
+// ---- Update Logic ----
+function checkForUpdate() {
+  if (!navigator.onLine) return; // Sadece internet varsa kontrol et
+  
+  fetch('https://api.github.com/repos/xevrado/CubeX/commits/main')
+    .then(res => res.json())
+    .then(data => {
+      if (!data || !data.sha) return;
+      const latestSha = data.sha;
+      const currentSha = localStorage.getItem('cubex_last_commit');
+      
+      if (!currentSha) {
+        // İlk giriş, sadece kaydet
+        localStorage.setItem('cubex_last_commit', latestSha);
+      } else if (currentSha !== latestSha) {
+        // Yeni güncelleme var (commit değişmiş)
+        const updatePopup = document.getElementById('updatePopup');
+        const doUpdateBtn = document.getElementById('doUpdateBtn');
+        const closeUpdateBtn = document.getElementById('closeUpdateBtn');
+        
+        if (updatePopup && doUpdateBtn && closeUpdateBtn) {
+          updatePopup.style.display = 'block';
+          
+          doUpdateBtn.addEventListener('click', () => {
+            localStorage.setItem('cubex_last_commit', latestSha);
+            window.location.reload(true);
+          });
+          
+          closeUpdateBtn.addEventListener('click', () => {
+            updatePopup.style.display = 'none';
+          });
+        }
+      }
+    })
+    .catch(err => console.log('Update check failed:', err));
+}
+
 // ---- Init ----
 function initApp() {
   createParticles();
   newGame();
   
-  // Uygulama (Capacitor) içindeysek İndir butonunu gizle
+  // Uygulama (Capacitor) içindeysek İndir butonunu gizle ve Güncelleme kontrolü yap
   if (window.Capacitor && window.Capacitor.getPlatform() !== 'web') {
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) downloadBtn.style.display = 'none';
+    
+    // İnternet varsa ve github kodu değişmişse güncelleme uyarısı göster (sadece mobil uygulama)
+    setTimeout(checkForUpdate, 1500); // Uygulama açıldıktan 1.5 sn sonra kontrol et
   }
 }
 
