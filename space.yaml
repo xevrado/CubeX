@@ -1,0 +1,6 @@
+title: Cubex-AI
+sdk: gradio
+sdk_version: 3.38.0
+app_file: app.py
+models:
+  - mistralai/Mistral-7B-v0.1
