@@ -98,6 +98,8 @@ let combo = 0;
 let currentPieces = [];  // [{shape, color, used}]
 let soundOn = true;
 let dragState = null;    // active drag info
+let cellElements = [];   // cached DOM elements for the board
+let dragRafId = null;    // rAF id for drag optimization
 
 // ---- Audio (Web Audio API — tiny synth) ----
 let audioCtx = null;
@@ -175,8 +177,10 @@ function createParticles() {
 // ---- Board Logic ----
 function createBoard() {
   board = [];
+  cellElements = [];
   for (let r = 0; r < BOARD_SIZE; r++) {
     board.push(new Array(BOARD_SIZE).fill(null));
+    cellElements.push(new Array(BOARD_SIZE).fill(null));
   }
 }
 
@@ -196,12 +200,16 @@ function renderBoard() {
         cell.classList.add('filled', 'color-' + board[r][c]);
       }
       boardEl.appendChild(cell);
+      cellElements[r][c] = cell; // Cache the DOM element
     }
   }
 }
 
 function getCellEl(r, c) {
-  return boardEl.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+  if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+    return cellElements[r][c];
+  }
+  return null;
 }
 
 // ---- Piece Generation ----
@@ -549,7 +557,8 @@ function onDragMove(e) {
   moveGhost(touch.clientX, touch.clientY);
   
   // RequestAnimationFrame kullanarak render'ı senkronize et
-  requestAnimationFrame(() => {
+  if (dragRafId) cancelAnimationFrame(dragRafId);
+  dragRafId = requestAnimationFrame(() => {
     highlightBoard(touch.clientX, touch.clientY);
   });
 }
@@ -607,6 +616,10 @@ function cleanupDrag() {
   if (ghostEl) {
     ghostEl.remove();
     ghostEl = null;
+  }
+  if (dragRafId) {
+    cancelAnimationFrame(dragRafId);
+    dragRafId = null;
   }
   dragState = null;
   document.removeEventListener('touchmove', onDragMove);
@@ -708,9 +721,14 @@ function highlightLinesToClear(piece, startR, startC) {
 }
 
 function clearHighlights() {
-  boardEl.querySelectorAll('.highlight-valid, .highlight-invalid, .almost-ready').forEach(el => {
-    el.classList.remove('highlight-valid', 'highlight-invalid', 'almost-ready');
-  });
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const el = cellElements[r][c];
+      if (el) {
+        el.classList.remove('highlight-valid', 'highlight-invalid', 'almost-ready');
+      }
+    }
+  }
 }
 
 // ---- Game Over ----
