@@ -11,6 +11,7 @@ CubeX, modern grafikleri ve akıcı oynanışıyla tasarlanmış bir bulmaca oyu
 ## 📥 İndir & Oyna
 - **Web Versiyonu:** [CubeX Web'de Oyna](https://xevrado.github.io/CubeX/)
 - **Android (APK):** [CubeX APK İndir](https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk)
+- **iOS:** Capacitor projesi ile iPhone 6 ve üzeri için hazır (Xcode gerektirir).
 
 ## 🛡️ Güvenlik ve Doğrulama
 Kullanıcılarımızın güvenliği bizim için önceliklidir. Uygulamamızın APK dosyası VirusTotal üzerinden taranmış ve tamamen güvenli olduğu doğrulanmıştır.

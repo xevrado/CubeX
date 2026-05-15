@@ -23,8 +23,8 @@
   --radius-lg: 24px;
   --radius-xl: 32px;
   --will-change: transform;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 20px);
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 * {
@@ -93,9 +93,21 @@ body {
   height: 100%;
   max-width: 430px;
   margin: 0 auto;
-  padding: calc(var(--safe-top) + 12px) 16px calc(var(--safe-bottom) + 12px);
-  gap: 20px; /* Increased consistent gap */
+  padding: calc(var(--safe-top) + 8px) 16px calc(var(--safe-bottom) + 8px);
+  gap: 16px; 
   overflow: hidden;
+  justify-content: center;
+}
+
+@media (max-height: 700px) {
+  .app-container {
+    gap: 10px;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+  }
+  .score-value { font-size: 32px; }
+  .game-board { gap: 2px; padding: 4px; }
+  .piece-slot { min-height: 80px; }
 }
 
 /* ---- Header ---- */
