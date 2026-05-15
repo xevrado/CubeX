@@ -546,6 +546,9 @@ function addScore(pts) {
     bestScore = score;
     bestEl.textContent = bestScore;
     localStorage.setItem('cubex_best', bestScore);
+    // Update menu score too
+    const menuBestDisplay = document.getElementById('menuBestDisplay');
+    if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
   }
 }
 
@@ -918,6 +921,15 @@ playAgainBtn.addEventListener('click', () => {
   newGame();
 });
 
+const backToMenuBtn = document.getElementById('backToMenuBtn');
+if (backToMenuBtn) {
+  backToMenuBtn.addEventListener('click', () => {
+    sfxClick();
+    gameOverOverlay.classList.remove('active');
+    document.getElementById('mainMenuOverlay').classList.add('active');
+  });
+}
+
 // Prevent scroll bounce on iOS
 document.body.addEventListener('touchmove', e => {
   if (dragState) e.preventDefault();
@@ -968,12 +980,27 @@ function checkForUpdate() {
 // ---- Init ----
 function initApp() {
   createParticles();
-  newGame();
   
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   const downloadBtn = document.getElementById('downloadBtn');
+  const mainMenuOverlay = document.getElementById('mainMenuOverlay');
+  const startBtn = document.getElementById('startBtn');
+  const menuBestDisplay = document.getElementById('menuBestDisplay');
 
-  // iOS'da (Safari veya Uygulama fark etmeksizin) İndir butonunu gizle (çünkü APK iPhone'da çalışmaz)
+  // Load best score for menu
+  bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
+  if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
+
+  // Start Game Button
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
+      sfxClick();
+      mainMenuOverlay.classList.remove('active');
+      newGame();
+    });
+  }
+
+  // iOS'da İndir butonunu gizle
   if (isIOS || (window.Capacitor && window.Capacitor.getPlatform() !== 'web')) {
     if (downloadBtn) downloadBtn.style.display = 'none';
     
@@ -982,7 +1009,6 @@ function initApp() {
     }
   }
 
-  // iOS Install Prompt Logic
   initIOSInstallPrompt();
 }
 
