@@ -212,6 +212,26 @@
   </div>
 
   <script src="game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Yeni güncelleme yüklendi. Eğer kullanıcı ana menüdeyse otomatik yenile.
+                const menuActive = document.getElementById('mainMenuOverlay').classList.contains('active');
+                if (menuActive) {
+                  window.location.reload();
+                }
+              }
+            });
+          });
+        });
+      });
+    }
+  </script>
 </body>
 
 </html>
