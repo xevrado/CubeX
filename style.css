@@ -184,8 +184,9 @@ body::before {
   letter-spacing: -0.5px;
   background: linear-gradient(135deg, #4f8ef7, #a855f7, #ec4899);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
 }
 
 .header-right {
@@ -1238,8 +1239,11 @@ body::before {
   letter-spacing: -2px;
   background: linear-gradient(to bottom, #fff, #94a3b8);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 40px;
+  margin: 0 auto 40px auto;
+  display: block;
+  width: fit-content;
   filter: drop-shadow(0 0 20px rgba(79, 142, 247, 0.3));
 }
 
