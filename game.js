@@ -470,30 +470,41 @@ function checkAndClear() {
     for (let r = 0; r < BOARD_SIZE; r++) cellsToExplode.add(r + ',' + c);
   }
 
-  // Clear board data IMMEDIATELY so logic (like game over check) is accurate
+  // Clear board data IMMEDIATELY
   cellsToExplode.forEach(key => {
     const [r, c] = key.split(',').map(Number);
-    board[r][c] = null;
+    if (board[r] && board[r][c] !== undefined) {
+      board[r][c] = null;
+    }
   });
 
   // Animate explode
   cellsToExplode.forEach(key => {
     const [r, c] = key.split(',').map(Number);
     const el = getCellEl(r, c);
-    if (el) el.classList.add('explode');
+    if (el) {
+      el.classList.add('explode');
+      // Force hardware acceleration for the animating cells
+      el.style.willChange = 'transform, opacity';
+    }
   });
 
   // Flash effect
-  clearFlashEl.classList.remove('flash');
-  void clearFlashEl.offsetWidth;
-  clearFlashEl.classList.add('flash');
+  if (clearFlashEl) {
+    clearFlashEl.classList.remove('flash');
+    void clearFlashEl.offsetWidth;
+    clearFlashEl.classList.add('flash');
+  }
 
   // Sync DOM after animation
   setTimeout(() => {
     cellsToExplode.forEach(key => {
       const [r, c] = key.split(',').map(Number);
       const el = getCellEl(r, c);
-      if (el) el.classList.remove('explode');
+      if (el) {
+        el.classList.remove('explode');
+        el.style.willChange = 'auto';
+      }
     });
     renderBoard();
   }, 350);
@@ -1039,36 +1050,45 @@ function createConfetti() {
   const container = document.body;
   const colors = ['#4f8ef7', '#a855f7', '#ec4899', '#06b6d4', '#22c55e', '#eab308'];
   
-  for (let i = 0; i < 40; i++) {
+  // Mobile optimization: fewer particles
+  const isMobile = window.innerWidth < 600;
+  const particleCount = isMobile ? 25 : 45;
+  
+  for (let i = 0; i < particleCount; i++) {
     const confetti = document.createElement('div');
     confetti.className = 'confetti';
     
-    const size = Math.random() * 8 + 4;
+    const size = Math.random() * 7 + 3;
     const color = colors[Math.floor(Math.random() * colors.length)];
     
     confetti.style.width = size + 'px';
     confetti.style.height = size + 'px';
     confetti.style.backgroundColor = color;
     confetti.style.left = Math.random() * 100 + 'vw';
-    confetti.style.top = '-10px';
+    confetti.style.top = '-20px';
     confetti.style.borderRadius = i % 2 === 0 ? '50%' : '2px';
     confetti.style.position = 'fixed';
-    confetti.style.zIndex = '1000';
+    confetti.style.zIndex = '2000';
     confetti.style.pointerEvents = 'none';
+    confetti.style.willChange = 'transform, opacity';
     
-    const duration = Math.random() * 2 + 1.5;
-    const drift = (Math.random() - 0.5) * 200;
+    const duration = Math.random() * 1.5 + 1.2;
+    const drift = (Math.random() - 0.5) * 150;
     
-    confetti.animate([
-      { transform: 'translate3d(0, 0, 0) rotate(0deg)', opacity: 1 },
-      { transform: `translate3d(${drift}px, 100vh, 0) rotate(${Math.random() * 720}deg)`, opacity: 0 }
-    ], {
-      duration: duration * 1000,
-      easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-      fill: 'forwards'
-    });
+    if (confetti.animate) {
+      confetti.animate([
+        { transform: 'translate3d(0, 0, 0) rotate(0deg)', opacity: 1 },
+        { transform: `translate3d(${drift}px, 100vh, 0) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+      ], {
+        duration: duration * 1000,
+        easing: 'ease-out',
+        fill: 'forwards'
+      });
+    }
     
     container.appendChild(confetti);
-    setTimeout(() => confetti.remove(), duration * 1000);
+    setTimeout(() => {
+      if (confetti.parentNode) confetti.remove();
+    }, duration * 1000 + 100);
   }
 }
