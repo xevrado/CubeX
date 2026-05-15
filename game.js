@@ -462,7 +462,6 @@ function checkAndClear() {
   haptics.impact(combo > 1 ? 'HEAVY' : 'MEDIUM');
   if (linesCleared >= 2) createConfetti();
 
-  // Animate explode
   const cellsToExplode = new Set();
   for (const r of rowsToClear) {
     for (let c = 0; c < BOARD_SIZE; c++) cellsToExplode.add(r + ',' + c);
@@ -471,6 +470,13 @@ function checkAndClear() {
     for (let r = 0; r < BOARD_SIZE; r++) cellsToExplode.add(r + ',' + c);
   }
 
+  // Clear board data IMMEDIATELY so logic (like game over check) is accurate
+  cellsToExplode.forEach(key => {
+    const [r, c] = key.split(',').map(Number);
+    board[r][c] = null;
+  });
+
+  // Animate explode
   cellsToExplode.forEach(key => {
     const [r, c] = key.split(',').map(Number);
     const el = getCellEl(r, c);
@@ -482,11 +488,12 @@ function checkAndClear() {
   void clearFlashEl.offsetWidth;
   clearFlashEl.classList.add('flash');
 
-  // Clear board data after animation
+  // Sync DOM after animation
   setTimeout(() => {
     cellsToExplode.forEach(key => {
       const [r, c] = key.split(',').map(Number);
-      board[r][c] = null;
+      const el = getCellEl(r, c);
+      if (el) el.classList.remove('explode');
     });
     renderBoard();
   }, 350);
@@ -699,7 +706,7 @@ function onDragEnd(e) {
       renderTray();
 
       // Check game over
-      setTimeout(() => checkGameOver(), 400);
+      setTimeout(() => checkGameOver(), 600);
     }, 50);
 
   } else {
