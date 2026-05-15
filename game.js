@@ -981,7 +981,8 @@ window.addEventListener('resize', () => {
 
 // ---- Update Logic ----
 function checkForUpdate() {
-  if (!navigator.onLine) return; // Sadece internet varsa kontrol et
+  const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
+  if (!isAndroid || !navigator.onLine) return;
   
   fetch('https://api.github.com/repos/xevrado/CubeX/commits/main')
     .then(res => res.json())
@@ -1040,13 +1041,16 @@ function initApp() {
     });
   }
 
-  // iOS'da İndir butonunu gizle
-  if (isIOS || (window.Capacitor && window.Capacitor.getPlatform() !== 'web')) {
+  // iOS'da İndir butonunu gizle (APK çalışmayacağı için)
+  if (isIOS) {
     if (downloadBtn) downloadBtn.style.display = 'none';
-    
-    if (navigator.onLine) {
-      setTimeout(checkForUpdate, 1000); 
-    }
+  }
+
+  // Android Uygulaması (Capacitor) içindeysek Güncelleme kontrolü yap
+  const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
+  if (isAndroid && navigator.onLine) {
+    if (downloadBtn) downloadBtn.style.display = 'none';
+    setTimeout(checkForUpdate, 2000); 
   }
 
   initIOSInstallPrompt();
