@@ -5,7 +5,7 @@ CubeX, modern grafikleri ve akıcı oynanışıyla tasarlanmış bir bulmaca oyu
 ## 🚀 Özellikler
 - **Akıcı Performans:** GPU hızlandırmalı grafikler ve optimize edilmiş oyun motoru.
 - **Akıllı Sistem:** Boş alanlara uygun parça gelme olasılığını artıran akıllı algoritma.
-- **Modern Tasarım:** iOS Premium stilinde şık ve göz yormayan arayüz.
+- **Modern Tasarım:** Şık ve göz yormayan arayüz.
 - **Offline Çalışma:** İnternet bağlantısı olmadan her yerde oynayabilirsiniz.
 
 ## 📥 İndir & Oyna
