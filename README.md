@@ -3,13 +3,13 @@
 CubeX, modern grafikleri ve akıcı oynanışıyla tasarlanmış bir bulmaca oyunudur. Stratejik olarak blokları yerleştirin, satırları/sütunları temizleyin ve en yüksek skoru hedefleyin!
 
 - **Web Versiyonu (iPhone & Android):** [CubeX Web'de Oyna](https://xevrado.github.io/CubeX/)
-- **iOS (iPhone):** Safari ile açıp "Ana Ekrana Ekle" diyerek uygulama gibi kullanabilirsiniz (Ücretsiz).
+- **iOS (iPhone):** Safari ile açıp "Ana Ekrana Ekle" diyerek uygulama gibi kullanabilirsiniz.
 - **Android (APK):** [CubeX APK İndir](https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk)
 
 ## 🚀 Özellikler
 - **Akıcı Performans:** GPU hızlandırmalı grafikler ve optimize edilmiş oyun motoru.
 - **Haptic Feedback:** iOS ve Android cihazlarda gerçekçi dokunsal geri bildirim.
-- **Akıllı Sistem:** Boş alanlara uygun parça gelme olasılığını artıran algoritma.
+- **Akıllı Sistem:** Boş alanlara uygun parça gelmesi için akıllı sistem tasarlanmıştır.
 - **Modern Tasarım:** Dinamik arka plan ve şık "iOS Premium" arayüz.
 
 ## 🛡️ Güvenlik ve Doğrulama
