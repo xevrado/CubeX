@@ -893,7 +893,7 @@ function newGame() {
 soundBtn.addEventListener('click', () => {
   initAudio();
   soundOn = !soundOn;
-  soundBtn.textContent = soundOn ? '🔊' : '🔇';
+  soundBtn.innerHTML = soundOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
   sfxClick();
 });
 
