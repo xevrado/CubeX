@@ -970,9 +970,11 @@ function initApp() {
   createParticles();
   newGame();
   
-  // Uygulama (Capacitor) içindeysek İndir butonunu gizle ve Güncelleme kontrolü yap
-  if (window.Capacitor && window.Capacitor.getPlatform() !== 'web') {
-    const downloadBtn = document.getElementById('downloadBtn');
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  // iOS'da (Safari veya Uygulama fark etmeksizin) İndir butonunu gizle (çünkü APK iPhone'da çalışmaz)
+  if (isIOS || (window.Capacitor && window.Capacitor.getPlatform() !== 'web')) {
     if (downloadBtn) downloadBtn.style.display = 'none';
     
     if (navigator.onLine) {
