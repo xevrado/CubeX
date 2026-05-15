@@ -439,96 +439,110 @@ function canPlaceAnywhere(piece) {
 
 // ---- Clear Lines ----
 function checkAndClear() {
-  const rowsToClear = [];
-  const colsToClear = [];
+  try {
+    const rowsToClear = [];
+    const colsToClear = [];
 
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    if (board[r].every(c => c !== null)) rowsToClear.push(r);
-  }
-  for (let c = 0; c < BOARD_SIZE; c++) {
-    let full = true;
+    // 1. Detection
     for (let r = 0; r < BOARD_SIZE; r++) {
-      if (board[r][c] === null) { full = false; break; }
+      if (board[r] && board[r].every(cell => cell !== null)) {
+        rowsToClear.push(r);
+      }
     }
-    if (full) colsToClear.push(c);
-  }
-
-  const linesCleared = rowsToClear.length + colsToClear.length;
-  if (linesCleared === 0) {
-    combo = 0;
-    comboEl.textContent = 'x1';
-    comboBadge.textContent = '';
-    return 0;
-  }
-
-  combo++;
-  haptics.impact(combo > 1 ? 'HEAVY' : 'MEDIUM');
-  if (linesCleared >= 2) createConfetti();
-
-  const cellsToExplode = new Set();
-  for (const r of rowsToClear) {
-    for (let c = 0; c < BOARD_SIZE; c++) cellsToExplode.add(r + ',' + c);
-  }
-  for (const c of colsToClear) {
-    for (let r = 0; r < BOARD_SIZE; r++) cellsToExplode.add(r + ',' + c);
-  }
-
-  // Clear board data IMMEDIATELY
-  cellsToExplode.forEach(key => {
-    const [r, c] = key.split(',').map(Number);
-    if (board[r] && board[r][c] !== undefined) {
-      board[r][c] = null;
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      let isFull = true;
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        if (!board[r] || board[r][c] === null) {
+          isFull = false;
+          break;
+        }
+      }
+      if (isFull) colsToClear.push(c);
     }
-  });
 
-  // Animate explode
-  cellsToExplode.forEach(key => {
-    const [r, c] = key.split(',').map(Number);
-    const el = getCellEl(r, c);
-    if (el) {
-      el.classList.add('explode');
-      // Force hardware acceleration for the animating cells
-      el.style.willChange = 'transform, opacity';
+    const linesCleared = rowsToClear.length + colsToClear.length;
+    if (linesCleared === 0) {
+      combo = 0;
+      if (comboEl) comboEl.textContent = 'x1';
+      if (comboBadge) comboBadge.textContent = '';
+      return 0;
     }
-  });
 
-  // Flash effect
-  if (clearFlashEl) {
-    clearFlashEl.classList.remove('flash');
-    void clearFlashEl.offsetWidth;
-    clearFlashEl.classList.add('flash');
-  }
+    // 2. Identify and NULLIFY immediately
+    const cellsToClear = [];
+    const processed = new Array(BOARD_SIZE * BOARD_SIZE).fill(false);
 
-  // Sync DOM after animation
-  setTimeout(() => {
-    cellsToExplode.forEach(key => {
-      const [r, c] = key.split(',').map(Number);
+    const addCell = (r, c) => {
+      const idx = r * BOARD_SIZE + c;
+      if (!processed[idx]) {
+        cellsToClear.push({ r, c });
+        processed[idx] = true;
+        board[r][c] = null; // NULLIFY DATA NOW
+      }
+    };
+
+    rowsToClear.forEach(r => {
+      for (let c = 0; c < BOARD_SIZE; c++) addCell(r, c);
+    });
+    colsToClear.forEach(c => {
+      for (let r = 0; r < BOARD_SIZE; r++) addCell(r, c);
+    });
+
+    // 3. Feedback (Non-blocking)
+    combo++;
+    try {
+      haptics.impact(combo > 1 ? 'HEAVY' : 'MEDIUM');
+      if (linesCleared >= 2) createConfetti();
+    } catch (err) {}
+
+    // 4. Visual Animation
+    cellsToClear.forEach(({ r, c }) => {
       const el = getCellEl(r, c);
       if (el) {
-        el.classList.remove('explode');
-        el.style.willChange = 'auto';
+        el.classList.add('explode');
+        el.style.willChange = 'transform, opacity';
       }
     });
-    renderBoard();
-  }, 350);
 
-  // Score
-  let points = linesCleared * 10 * BOARD_SIZE;
-  if (combo > 1) {
-    points = Math.floor(points * (1 + combo * 0.5));
-    sfxCombo();
-    comboBadge.textContent = '🔥 COMBO x' + combo + '!';
-  } else {
-    sfxClear();
-    comboBadge.textContent = '';
+    if (clearFlashEl) {
+      clearFlashEl.classList.remove('flash');
+      void clearFlashEl.offsetWidth;
+      clearFlashEl.classList.add('flash');
+    }
+
+    // 5. Final Sync
+    setTimeout(() => {
+      cellsToClear.forEach(({ r, c }) => {
+        const el = getCellEl(r, c);
+        if (el) {
+          el.classList.remove('explode');
+          el.style.willChange = 'auto';
+        }
+      });
+      renderBoard();
+    }, 350);
+
+    // 6. Score
+    let points = linesCleared * 10 * BOARD_SIZE;
+    if (combo > 1) {
+      points = Math.floor(points * (1 + combo * 0.5));
+      sfxCombo();
+      if (comboBadge) comboBadge.textContent = '🔥 COMBO x' + combo + '!';
+    } else {
+      sfxClear();
+      if (comboBadge) comboBadge.textContent = '';
+    }
+
+    if (comboEl) comboEl.textContent = 'x' + Math.max(1, combo);
+    addScore(points);
+    showScorePopup(points);
+
+    return linesCleared;
+  } catch (globalErr) {
+    console.error("Line clearing error:", globalErr);
+    renderBoard(); // Fallback to safe state
+    return 0;
   }
-
-  comboEl.textContent = 'x' + Math.max(1, combo);
-
-  addScore(points);
-  showScorePopup(points);
-
-  return linesCleared;
 }
 
 function addScore(pts) {
@@ -711,20 +725,20 @@ function onDragEnd(e) {
     addScore(dragState.piece.cells.length);
 
     renderBoard();
+    checkAndClear();
 
-    // Check clears
-    setTimeout(() => {
-      checkAndClear();
-
-      // Check if all 3 used → new set
-      if (currentPieces.every(p => p.used)) {
+    // Check if all 3 used → new set
+    if (currentPieces.every(p => p.used)) {
+      setTimeout(() => {
         generatePieces();
-      }
+        renderTray();
+      }, 300);
+    } else {
       renderTray();
+    }
 
-      // Check game over
-      setTimeout(() => checkGameOver(), 600);
-    }, 50);
+    // Check game over
+    setTimeout(() => checkGameOver(), 600);
 
   } else {
     // Return piece
