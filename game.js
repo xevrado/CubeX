@@ -2,6 +2,9 @@
    CUBEX — Full Game Logic
    ========================================= */
 
+// ---- Version (Android APK Update Check) ----
+const APP_VERSION = "1.0.8"; // Bu her APK yayınında güncellenmelidir
+
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -984,32 +987,28 @@ function checkForUpdate() {
   const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
   if (!isAndroid || !navigator.onLine) return;
   
-  fetch('https://api.github.com/repos/xevrado/CubeX/commits/main')
+  // En son sürümü GitHub Releases üzerinden kontrol et
+  fetch('https://api.github.com/repos/xevrado/CubeX/releases/latest')
     .then(res => res.json())
     .then(data => {
-      if (!data || !data.sha) return;
-      const latestSha = data.sha;
-      const currentSha = localStorage.getItem('cubex_last_commit');
+      if (!data || !data.tag_name) return;
+      const latestVersion = data.tag_name; // Örn: "1.0.9"
       
-      if (!currentSha) {
-        // İlk giriş, sadece kaydet
-        localStorage.setItem('cubex_last_commit', latestSha);
-      } else if (currentSha !== latestSha) {
-        // Yeni güncelleme var (commit değişmiş)
+      if (latestVersion !== APP_VERSION) {
         const updatePopup = document.getElementById('updatePopup');
         const doUpdateBtn = document.getElementById('doUpdateBtn');
-        const closeUpdateBtn = document.getElementById('closeUpdateBtn');
         
-        if (updatePopup && doUpdateBtn && closeUpdateBtn) {
+        if (updatePopup && doUpdateBtn) {
           updatePopup.style.display = 'block';
           
-          doUpdateBtn.addEventListener('click', () => {
-            localStorage.setItem('cubex_last_commit', latestSha);
-            window.location.reload(true);
-          });
-          
-          closeUpdateBtn.addEventListener('click', () => {
-            updatePopup.style.display = 'none';
+          doUpdateBtn.addEventListener('click', async () => {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+              await window.Capacitor.Plugins.Browser.open({ 
+                url: 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk' 
+              });
+            } else {
+              window.location.href = 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk';
+            }
           });
         }
       }
