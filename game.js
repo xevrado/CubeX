@@ -103,6 +103,25 @@ function initAudio() {
   }
 }
 
+// ---- Haptics (Capacitor) ----
+const haptics = {
+  impact: (style = 'MEDIUM') => {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+      window.Capacitor.Plugins.Haptics.impact({ style });
+    }
+  },
+  notification: (type = 'SUCCESS') => {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+      window.Capacitor.Plugins.Haptics.notification({ type });
+    }
+  },
+  vibrate: () => {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+      window.Capacitor.Plugins.Haptics.vibrate();
+    }
+  }
+};
+
 function playTone(freq, duration, type = 'sine', vol = 0.12) {
   if (!soundOn || !audioCtx) return;
   try {
@@ -440,6 +459,8 @@ function checkAndClear() {
   }
 
   combo++;
+  haptics.impact(combo > 1 ? 'HEAVY' : 'MEDIUM');
+  if (linesCleared >= 2) createConfetti();
 
   // Animate explode
   const cellsToExplode = new Set();
@@ -648,6 +669,7 @@ function onDragEnd(e) {
     placePiece(dragState.piece, target.row, target.col);
     currentPieces[dragState.pieceIndex].used = true;
     sfxPlace();
+    haptics.impact('LIGHT');
 
     // Add small points for placing
     addScore(dragState.piece.cells.length);
@@ -940,3 +962,42 @@ function initApp() {
 }
 
 initApp();
+
+// ---- Confetti Effect ----
+function createConfetti() {
+  const container = document.body;
+  const colors = ['#4f8ef7', '#a855f7', '#ec4899', '#06b6d4', '#22c55e', '#eab308'];
+  
+  for (let i = 0; i < 40; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+    
+    const size = Math.random() * 8 + 4;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    
+    confetti.style.width = size + 'px';
+    confetti.style.height = size + 'px';
+    confetti.style.backgroundColor = color;
+    confetti.style.left = Math.random() * 100 + 'vw';
+    confetti.style.top = '-10px';
+    confetti.style.borderRadius = i % 2 === 0 ? '50%' : '2px';
+    confetti.style.position = 'fixed';
+    confetti.style.zIndex = '1000';
+    confetti.style.pointerEvents = 'none';
+    
+    const duration = Math.random() * 2 + 1.5;
+    const drift = (Math.random() - 0.5) * 200;
+    
+    confetti.animate([
+      { transform: 'translate3d(0, 0, 0) rotate(0deg)', opacity: 1 },
+      { transform: `translate3d(${drift}px, 100vh, 0) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+    ], {
+      duration: duration * 1000,
+      easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      fill: 'forwards'
+    });
+    
+    container.appendChild(confetti);
+    setTimeout(() => confetti.remove(), duration * 1000);
+  }
+}
