@@ -1,7 +1,7 @@
 {
   "name": "cubex",
   "version": "1.0.0",
-  "description": "CubeX - Premium Puzzle Game",
+  "description": "CubeX - Puzzle Game",
   "scripts": {
     "build": "xcopy /E /Y /I index.html www\\ && xcopy /E /Y /I style.css www\\ && xcopy /E /Y /I game.js www\\ && xcopy /E /Y /I manifest.json www\\",
     "sync": "npx cap sync android",
