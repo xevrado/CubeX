@@ -102,8 +102,11 @@
   <div class="overlay active" id="mainMenuOverlay">
     <div class="overlay-card menu-card">
       <div class="menu-logo">CubeX</div>
+      <button class="overlay-btn primary-btn menu-play-btn" id="resumeBtn" style="display:none; margin-bottom: 10px;">
+        <i class="fas fa-play"></i> Devam Et
+      </button>
       <button class="overlay-btn primary-btn menu-play-btn" id="startBtn">
-        <i class="fas fa-play"></i> Oyna — <span class="menu-best-text">[En İyi: <span id="menuBestDisplay">0</span>
+        <i class="fas fa-gamepad"></i> Yeni Oyun — <span class="menu-best-text">[En İyi: <span id="menuBestDisplay">0</span>
           p.]</span>
       </button>
 
@@ -177,6 +180,23 @@
         </div>
       </div>
       <button class="overlay-btn primary-btn" id="closeHelpBtn">Anladım! <i class="fas fa-check"></i></button>
+    </div>
+  </div>
+
+  <!-- Custom Confirm Dialog -->
+  <div class="overlay" id="confirmOverlay">
+    <div class="overlay-card" style="max-width: 340px; text-align: center;">
+      <div class="overlay-emoji"><i class="fas fa-exclamation-triangle" style="color: #eab308;"></i></div>
+      <h2 class="overlay-title" id="confirmTitle">Emin misin?</h2>
+      <p class="overlay-sub" id="confirmMessage">Mevcut oyun silinecek.</p>
+      <div style="display: flex; gap: 12px; margin-top: 18px;">
+        <button class="overlay-btn secondary-btn" id="confirmNo" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+          <i class="fas fa-times"></i> Hayır
+        </button>
+        <button class="overlay-btn primary-btn" id="confirmYes" style="flex:1;">
+          <i class="fas fa-check"></i> Evet
+        </button>
+      </div>
     </div>
   </div>
 

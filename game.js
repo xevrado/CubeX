@@ -97,6 +97,7 @@ let cellElements = [];   // cached DOM elements for the board
 let highlightedCells = new Set(); // Sadece vurgulanan hücreleri tut (Performans)
 let dragRafId = null;    // rAF id for drag optimization
 let clearingInProgress = false; // Satır temizleme animasyonu sırasında yerleştirmeyi engelle
+let gameActive = false;  // Aktif bir oyun var mı?
 
 // ---- Audio (Web Audio API — tiny synth) ----
 let audioCtx = null;
@@ -741,9 +742,11 @@ function onDragEnd(e) {
       setTimeout(() => {
         generatePieces();
         renderTray();
+        saveGameState(); // Yeni parçalar oluşturulduktan sonra kaydet
       }, 300);
     } else {
       renderTray();
+      saveGameState(); // Her parça yerleştirmede kaydet
     }
 
     // Check game over
@@ -906,6 +909,7 @@ function gameOver() {
   finalBestEl.textContent = bestScore;
   finalLevelEl.textContent = level;
   gameOverOverlay.classList.add('active');
+  clearGameState(); // Oyun bitti, kaydı temizle
 }
 
 // ---- New Game ----
@@ -925,6 +929,74 @@ function newGame() {
   renderBoard();
   generatePieces();
   renderTray();
+  gameActive = true;
+  saveGameState();
+}
+
+// ---- Save / Load Game State ----
+function saveGameState() {
+  try {
+    const state = {
+      board: board,
+      score: score,
+      level: level,
+      combo: combo,
+      currentPieces: currentPieces.map(p => ({
+        cells: p.cells,
+        color: p.color,
+        used: p.used,
+        name: p.name
+      })),
+      gameActive: gameActive
+    };
+    localStorage.setItem('cubex_gameState', JSON.stringify(state));
+  } catch (e) {
+    console.error('Game state save error:', e);
+  }
+}
+
+function loadGameState() {
+  try {
+    const saved = localStorage.getItem('cubex_gameState');
+    if (!saved) return false;
+    
+    const state = JSON.parse(saved);
+    if (!state || !state.board || !state.currentPieces || !state.gameActive) return false;
+    
+    // Validate board
+    if (state.board.length !== BOARD_SIZE) return false;
+    
+    board = state.board;
+    score = state.score || 0;
+    level = state.level || 1;
+    combo = state.combo || 0;
+    currentPieces = state.currentPieces || [];
+    gameActive = true;
+    
+    // Update UI
+    scoreEl.textContent = score;
+    levelEl.textContent = level;
+    comboCountEl.textContent = 'x' + Math.max(1, combo);
+    comboDisplayEl.textContent = '';
+    bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
+    bestEl.textContent = bestScore;
+    
+    createBoard();
+    // Restore board data after createBoard (which resets the array)
+    board = state.board;
+    renderBoard();
+    renderTray();
+    
+    return true;
+  } catch (e) {
+    console.error('Game state load error:', e);
+    return false;
+  }
+}
+
+function clearGameState() {
+  localStorage.removeItem('cubex_gameState');
+  gameActive = false;
 }
 
 // ---- Button Events ----
@@ -946,13 +1018,12 @@ closeHelpBtn.addEventListener('click', () => {
 });
 
 restartBtn.addEventListener('click', () => {
+  sfxClick();
   if (score > 10) {
-    if (confirm('Oyunu yeniden başlatmak istiyor musun?')) {
-      sfxClick();
+    showConfirm('Oyunu yeniden başlatmak istiyor musun?', () => {
       newGame();
-    }
+    });
   } else {
-    sfxClick();
     newGame();
   }
 });
@@ -961,9 +1032,11 @@ const homeBtn = document.getElementById('homeBtn');
 if (homeBtn) {
   homeBtn.addEventListener('click', () => {
     sfxClick();
-    if (score > 10 && !confirm('Ana menüye dönmek istiyor musun? Mevcut ilerlemen kaybolacak.')) {
-      return;
+    // Oyun durumunu kaydet (sıfırlanmasın)
+    if (gameActive) {
+      saveGameState();
     }
+    updateMenuButtons(); // Menü butonlarını güncelle
     document.getElementById('mainMenuOverlay').classList.add('active');
   });
 }
@@ -977,7 +1050,9 @@ const backToMenuBtn = document.getElementById('backToMenuBtn');
 if (backToMenuBtn) {
   backToMenuBtn.addEventListener('click', () => {
     sfxClick();
+    clearGameState(); // Oyun bitti, kaydı temizle
     gameOverOverlay.classList.remove('active');
+    updateMenuButtons();
     document.getElementById('mainMenuOverlay').classList.add('active');
   });
 }
@@ -991,6 +1066,33 @@ function preventScrollDuringDrag(e) {
 window.addEventListener('resize', () => {
   renderBoard();
 });
+
+// ---- Custom Confirm Dialog ----
+function showConfirm(message, onYes, onNo) {
+  const overlay = document.getElementById('confirmOverlay');
+  const msgEl = document.getElementById('confirmMessage');
+  const yesBtn = document.getElementById('confirmYes');
+  const noBtn = document.getElementById('confirmNo');
+  
+  if (!overlay || !yesBtn || !noBtn) {
+    // Fallback: direkt çalıştır
+    if (onYes) onYes();
+    return;
+  }
+  
+  if (msgEl) msgEl.textContent = message;
+  overlay.classList.add('active');
+  
+  // Eski listener'ları temizle
+  yesBtn.onclick = () => {
+    overlay.classList.remove('active');
+    if (onYes) onYes();
+  };
+  noBtn.onclick = () => {
+    overlay.classList.remove('active');
+    if (onNo) onNo();
+  };
+}
 
 // ---- Update Logic ----
 function checkForUpdate() {
@@ -1033,6 +1135,26 @@ function checkForUpdate() {
     .catch(err => console.error("Update check failed:", err));
 }
 
+// ---- Menu Button Helpers ----
+function updateMenuButtons() {
+  const startBtn = document.getElementById('startBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
+  
+  if (gameActive) {
+    // Aktif oyun var: her iki butonu da göster
+    if (resumeBtn) resumeBtn.style.display = '';
+    if (startBtn) startBtn.style.display = '';
+  } else {
+    // Aktif oyun yok: sadece "Yeni Oyun" göster
+    if (resumeBtn) resumeBtn.style.display = 'none';
+    if (startBtn) startBtn.style.display = '';
+  }
+  
+  // Best score güncelle
+  const menuBestDisplay = document.getElementById('menuBestDisplay');
+  if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
+}
+
 // ---- Init ----
 function initApp() {
   createParticles();
@@ -1041,19 +1163,52 @@ function initApp() {
   const downloadBtn = document.getElementById('downloadBtn');
   const mainMenuOverlay = document.getElementById('mainMenuOverlay');
   const startBtn = document.getElementById('startBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
   const menuBestDisplay = document.getElementById('menuBestDisplay');
 
   // Load best score for menu
   bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
   if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
 
-  // Start Game Button
+  // Kaydedilmiş oyun var mı kontrol et
+  const hasSavedGame = !!localStorage.getItem('cubex_gameState');
+  if (hasSavedGame) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cubex_gameState'));
+      if (saved && saved.gameActive) gameActive = true;
+    } catch(e) {}
+  }
+  
+  updateMenuButtons();
+
+  // "Yeni Oyun" butonu — aktif oyun varsa onay sor
   if (startBtn) {
     startBtn.addEventListener('click', () => {
-      initAudio(); // Initialize audio context on first meaningful click
+      initAudio();
+      sfxClick();
+      if (gameActive) {
+        showConfirm('Mevcut oyun silinecek. Yeni oyun başlatmak istiyor musun?', () => {
+          mainMenuOverlay.classList.remove('active');
+          newGame();
+        });
+      } else {
+        mainMenuOverlay.classList.remove('active');
+        newGame();
+      }
+    });
+  }
+
+  // "Devam Et" butonu — kaydedilmiş oyunu yükler
+  if (resumeBtn) {
+    resumeBtn.addEventListener('click', () => {
+      initAudio();
       sfxClick();
       mainMenuOverlay.classList.remove('active');
-      newGame();
+      const loaded = loadGameState();
+      if (!loaded) {
+        // Kayıt bozuksa yeni oyun başlat
+        newGame();
+      }
     });
   }
 
