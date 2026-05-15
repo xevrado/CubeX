@@ -956,9 +956,34 @@ function initApp() {
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) downloadBtn.style.display = 'none';
     
-    // İnternet varsa ve github kodu değişmişse güncelleme uyarısı göster (sadece mobil uygulama)
-    setTimeout(checkForUpdate, 1500); // Uygulama açıldıktan 1.5 sn sonra kontrol et
+    // İnternet varsa ve github kodu değişmişse güncelleme uyarısı göster  // Check for update
   }
+  if (navigator.onLine) {
+    setTimeout(checkForUpdate, 1500); 
+  }
+
+  // iOS Install Prompt Logic
+  initIOSInstallPrompt();
+}
+
+function initIOSInstallPrompt() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  const prompt = document.getElementById('iosInstallPrompt');
+  const closeBtn = document.getElementById('closePrompt');
+
+  if (isIOS && !isStandalone) {
+    // Show prompt after 3 seconds
+    setTimeout(() => {
+      prompt.classList.add('show');
+    }, 3000);
+  }
+
+  closeBtn.addEventListener('click', () => {
+    prompt.classList.remove('show');
+    // Session bazlı gizle (sayfa yenilenene kadar)
+    prompt.style.display = 'none';
+  });
 }
 
 initApp();

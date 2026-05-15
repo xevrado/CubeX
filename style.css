@@ -1052,3 +1052,121 @@ body::before {
   from { top: -100px; opacity: 0; }
   to { top: 20px; opacity: 1; }
 }
+
+/* ---- iOS Install Prompt ---- */
+.ios-install-prompt {
+  position: fixed;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%) translateY(150%);
+  width: min(calc(100vw - 32px), 360px);
+  background: rgba(20, 20, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(79, 142, 247, 0.2);
+  z-index: 2000;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: none;
+}
+
+.ios-install-prompt.show {
+  display: block;
+  transform: translateX(-50%) translateY(0);
+  animation: floatPrompt 3s ease-in-out infinite;
+}
+
+@keyframes floatPrompt {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-8px); }
+}
+
+.prompt-content {
+  padding: 16px;
+}
+
+.prompt-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.prompt-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.prompt-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.prompt-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+}
+
+.prompt-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.close-prompt {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prompt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prompt-body .step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.step-icon {
+  font-size: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.prompt-arrow {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid rgba(20, 20, 40, 0.95);
+}
