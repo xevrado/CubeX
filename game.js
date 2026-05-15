@@ -555,10 +555,12 @@ function showScorePopup(pts) {
 let ghostEl = null;
 
 function onDragStart(e) {
+  // Prevent default early to avoid browser interference (scrolling, etc.)
+  if (e.cancelable) e.preventDefault();
+
   if (dragState) return;
   
   if (e.type === 'touchstart' && e.touches.length > 1) {
-    e.preventDefault();
     return;
   }
 
@@ -567,9 +569,13 @@ function onDragStart(e) {
   const piece = currentPieces[idx];
   if (!piece || piece.used) return;
 
-  e.preventDefault();
-  initAudio();
+  // Safety: Cleanup any stray ghosts from previous failed drags
+  if (ghostEl) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
 
+  initAudio();
   sfxClick();
 
   // Calculate current board cell size for perfect ghost matching
@@ -597,12 +603,18 @@ function onDragStart(e) {
         // Match the board cell look
         cell.style.width = cellSize + 'px';
         cell.style.height = cellSize + 'px';
+        cell.style.userSelect = 'none';
+        cell.style.webkitUserSelect = 'none';
+        cell.style.pointerEvents = 'none';
       } else {
         cell.style.visibility = 'hidden';
       }
       ghostEl.appendChild(cell);
     }
   }
+  ghostEl.style.userSelect = 'none';
+  ghostEl.style.webkitUserSelect = 'none';
+  ghostEl.style.touchAction = 'none';
   document.body.appendChild(ghostEl);
 
   // Position ghost
