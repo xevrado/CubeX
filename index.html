@@ -8,6 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#020617" />
+  <meta name="description" content="CubeX - Modern blok bulmaca oyunu. Stratejik düşün, satır ve sütunları tamamla, combo yap!" />
+  <meta property="og:title" content="CubeX – Puzzle Game" />
+  <meta property="og:description" content="CubeX - Modern blok bulmaca oyunu. Stratejik düşün, combo yap!" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="icon-512.png" />
   <title>CubeX</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
@@ -16,7 +21,7 @@
   <link rel="apple-touch-icon" sizes="167x167" href="icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
-    href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
@@ -32,19 +37,19 @@
     <!-- Header -->
     <header class="game-header">
       <div class="header-left">
-        <button class="icon-btn" id="homeBtn" title="Ana Menü"><i class="fas fa-house"></i></button>
-        <button class="icon-btn" id="restartBtn" title="Yeniden Başla"><i class="fas fa-rotate-left"></i></button>
+        <button class="icon-btn" id="homeBtn" title="Ana Menü" aria-label="Ana Menü"><i class="fas fa-house"></i></button>
+        <button class="icon-btn" id="restartBtn" title="Yeniden Başla" aria-label="Yeniden Başla"><i class="fas fa-rotate-left"></i></button>
         <span class="app-title">CubeX</span>
       </div>
       <div class="header-right">
         <a class="download-btn" id="downloadBtn"
           href="https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk" download="CubeX.apk"
-          title="APK İndir">
+          title="APK İndir" aria-label="APK İndir">
           <span class="download-btn-border"></span>
           <span class="download-btn-content"><i class="fas fa-download"></i> İndir</span>
         </a>
-        <button class="icon-btn" id="soundBtn" title="Ses"><i class="fas fa-volume-up"></i></button>
-        <button class="icon-btn" id="helpBtn" title="Yardım"><i class="fas fa-question-circle"></i></button>
+        <button class="icon-btn" id="soundBtn" title="Ses" aria-label="Ses Aç/Kapat"><i class="fas fa-volume-up"></i></button>
+        <button class="icon-btn" id="helpBtn" title="Yardım" aria-label="Yardım"><i class="fas fa-question-circle"></i></button>
       </div>
     </header>
 

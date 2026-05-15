@@ -96,6 +96,7 @@ let dragState = null;    // active drag info
 let cellElements = [];   // cached DOM elements for the board
 let highlightedCells = new Set(); // Sadece vurgulanan hücreleri tut (Performans)
 let dragRafId = null;    // rAF id for drag optimization
+let clearingInProgress = false; // Satır temizleme animasyonu sırasında yerleştirmeyi engelle
 
 // ---- Audio (Web Audio API — tiny synth) ----
 let audioCtx = null;
@@ -155,8 +156,8 @@ const boardEl        = document.getElementById('gameBoard');
 const scoreEl        = document.getElementById('scoreDisplay');
 const bestEl         = document.getElementById('bestDisplay');
 const levelEl        = document.getElementById('levelDisplay');
-const comboEl        = document.getElementById('comboCount');
-const comboBadge     = document.getElementById('comboDisplay');
+const comboCountEl   = document.getElementById('comboCount');
+const comboDisplayEl = document.getElementById('comboDisplay');
 const trayEl         = document.getElementById('pieceTray');
 const clearFlashEl   = document.getElementById('clearFlash');
 const scorePopupEl   = document.getElementById('scorePopup');
@@ -377,6 +378,7 @@ function renderTray() {
     // Clean up old listeners to prevent duplicates
     const newSlot = slot.cloneNode(false);
     slot.parentNode.replaceChild(newSlot, slot);
+    newSlot.dataset.pieceIndex = i;
 
     const piece = currentPieces[i];
     if (!piece || piece.used) {
@@ -466,8 +468,8 @@ function checkAndClear() {
     const linesCleared = rowsToClear.length + colsToClear.length;
     if (linesCleared === 0) {
       combo = 0;
-      if (comboEl) comboEl.textContent = 'x1';
-      if (comboBadge) comboBadge.textContent = '';
+      if (comboCountEl) comboCountEl.textContent = 'x1';
+      if (comboDisplayEl) comboDisplayEl.textContent = '';
       return 0;
     }
 
@@ -498,7 +500,8 @@ function checkAndClear() {
       if (linesCleared >= 2) createConfetti();
     } catch (err) {}
 
-    // 4. Visual Animation
+    // 4. Visual Animation — Race condition koruması
+    clearingInProgress = true;
     cellsToClear.forEach(({ r, c }) => {
       const el = getCellEl(r, c);
       if (el) {
@@ -522,6 +525,7 @@ function checkAndClear() {
           el.style.willChange = 'auto';
         }
       });
+      clearingInProgress = false;
       renderBoard();
     }, 350);
 
@@ -530,13 +534,13 @@ function checkAndClear() {
     if (combo > 1) {
       points = Math.floor(points * (1 + combo * 0.5));
       sfxCombo();
-      if (comboBadge) comboBadge.textContent = '🔥 COMBO x' + combo + '!';
+      if (comboDisplayEl) comboDisplayEl.textContent = '🔥 COMBO x' + combo + '!';
     } else {
       sfxClear();
-      if (comboBadge) comboBadge.textContent = '';
+      if (comboDisplayEl) comboDisplayEl.textContent = '';
     }
 
-    if (comboEl) comboEl.textContent = 'x' + Math.max(1, combo);
+    if (comboCountEl) comboCountEl.textContent = 'x' + Math.max(1, combo);
     addScore(points);
     showScorePopup(points);
 
@@ -674,6 +678,8 @@ function onDragStart(e) {
     document.addEventListener('touchmove', onDragMove, { passive: false });
     document.addEventListener('touchend', onDragEnd);
     document.addEventListener('touchcancel', onDragCancel);
+    // Drag sırasında iOS scroll bounce'u engelle (dinamik — sadece drag aktifken)
+    document.body.addEventListener('touchmove', preventScrollDuringDrag, { passive: false });
   } else {
     document.addEventListener('mousemove', onDragMove);
     document.addEventListener('mouseup', onDragEnd);
@@ -717,8 +723,8 @@ function onDragEnd(e) {
   
   clearHighlights();
 
-  if (target && canPlace(dragState.piece.cells, target.row, target.col)) {
-    // Place piece
+  if (target && !clearingInProgress && canPlace(dragState.piece.cells, target.row, target.col)) {
+    // Place piece (clearingInProgress kontrolü race condition'ı önler)
     placePiece(dragState.piece, target.row, target.col);
     currentPieces[dragState.pieceIndex].used = true;
     sfxPlace();
@@ -773,6 +779,7 @@ function cleanupDrag() {
   document.removeEventListener('touchmove', onDragMove);
   document.removeEventListener('touchend', onDragEnd);
   document.removeEventListener('touchcancel', onDragCancel);
+  document.body.removeEventListener('touchmove', preventScrollDuringDrag);
   document.removeEventListener('mousemove', onDragMove);
   document.removeEventListener('mouseup', onDragEnd);
 }
@@ -908,8 +915,8 @@ function newGame() {
   combo = 0;
   scoreEl.textContent = '0';
   levelEl.textContent = '1';
-  comboEl.textContent = 'x1';
-  comboBadge.textContent = '';
+  comboCountEl.textContent = 'x1';
+  comboDisplayEl.textContent = '';
   bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
   bestEl.textContent = bestScore;
   gameOverOverlay.classList.remove('active');
@@ -939,10 +946,13 @@ closeHelpBtn.addEventListener('click', () => {
 });
 
 restartBtn.addEventListener('click', () => {
-  sfxClick();
-  if (score > 10 && confirm('Oyunu yeniden başlatmak istiyor musun?')) {
-    newGame();
-  } else if (score <= 10) {
+  if (score > 10) {
+    if (confirm('Oyunu yeniden başlatmak istiyor musun?')) {
+      sfxClick();
+      newGame();
+    }
+  } else {
+    sfxClick();
     newGame();
   }
 });
@@ -972,10 +982,10 @@ if (backToMenuBtn) {
   });
 }
 
-// Prevent scroll bounce on iOS
-document.body.addEventListener('touchmove', e => {
+// iOS scroll bounce engelleyici — sadece drag sırasında aktif (performans optimizasyonu)
+function preventScrollDuringDrag(e) {
   if (dragState) e.preventDefault();
-}, { passive: false });
+}
 
 // ---- Window resize ----
 window.addEventListener('resize', () => {
@@ -988,18 +998,20 @@ function checkForUpdate() {
   if (!isAndroid || !navigator.onLine) return;
   
   // Basit bir version.txt dosyasını kontrol et (GitHub API limitlerine takılmaz)
-  fetch('version.txt?t=' + Date.now())
+  fetch('https://raw.githubusercontent.com/xevrado/CubeX/main/version.txt?t=' + Date.now())
     .then(res => res.text())
     .then(latestVersion => {
       latestVersion = latestVersion.trim();
       if (latestVersion !== APP_VERSION) {
         const updatePopup = document.getElementById('updatePopup');
         const doUpdateBtn = document.getElementById('doUpdateBtn');
+        const closeUpdateBtn = document.getElementById('closeUpdateBtn');
         
         if (updatePopup && doUpdateBtn) {
           updatePopup.style.display = 'block';
           
-          doUpdateBtn.addEventListener('click', async () => {
+          // onclick kullanarak listener birikimini önle (Memory Leak Fix)
+          doUpdateBtn.onclick = async () => {
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
               await window.Capacitor.Plugins.Browser.open({ 
                 url: 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk' 
@@ -1007,7 +1019,14 @@ function checkForUpdate() {
             } else {
               window.location.href = 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk';
             }
-          });
+          };
+
+          // Kapatma butonu bağlantısı
+          if (closeUpdateBtn) {
+            closeUpdateBtn.onclick = () => {
+              updatePopup.style.display = 'none';
+            };
+          }
         }
       }
     })
@@ -1058,6 +1077,8 @@ function initIOSInstallPrompt() {
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
   const prompt = document.getElementById('iosInstallPrompt');
   const closeBtn = document.getElementById('closePrompt');
+
+  if (!prompt || !closeBtn) return; // Null güvenlik kontrolü
 
   if (isIOS && !isStandalone) {
     // Show prompt after 3 seconds

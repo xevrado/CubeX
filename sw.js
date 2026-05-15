@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubex-v1.1.0';
+const CACHE_NAME = 'cubex-v1.1.1';
 const ASSETS = [
   './',
   'index.html',
@@ -41,7 +41,7 @@ self.addEventListener('fetch', event => {
         const fetchPromise = fetch(event.request).then(networkResponse => {
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
-        }).catch(() => response);
+        }).catch(() => response || new Response('Çevrimdışı', { status: 503, statusText: 'Service Unavailable' }));
         
         return response || fetchPromise;
       });

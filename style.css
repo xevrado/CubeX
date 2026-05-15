@@ -127,16 +127,7 @@ body::before {
   margin-bottom: 0;
 }
 
-@media (max-height: 700px) {
-  .app-container {
-    gap: 10px;
-    padding-top: var(--safe-top);
-    padding-bottom: var(--safe-bottom);
-  }
-  .score-value { font-size: 32px; }
-  .game-board { gap: 2px; padding: 4px; }
-  .piece-slot { min-height: 80px; }
-}
+/* Responsive tweaks for max-height: 700px merged below (line ~995) */
 
 /* ---- Header ---- */
 .game-header {
@@ -475,7 +466,6 @@ body::before {
   transition: background 0.1s ease;
   position: relative;
   overflow: hidden;
-  will-change: transform, background; /* GPU hızlandırması */
   transform: translateZ(0);
 }
 
@@ -523,6 +513,14 @@ body::before {
 @keyframes almostPulseSimple {
   from { opacity: 0.6; }
   to { opacity: 1; }
+}
+
+/* will-change sadece animasyon anında — GPU bellek optimizasyonu */
+.cell.explode,
+.cell.highlight-valid,
+.cell.highlight-invalid,
+.cell.almost-ready {
+  will-change: transform, opacity;
 }
 
 .cell.explode {
@@ -995,10 +993,21 @@ body::before {
 @media (max-height: 700px) {
   .app-container {
     gap: 8px;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
   }
 
   .score-value {
     font-size: 30px;
+  }
+
+  .game-board {
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .piece-slot {
+    min-height: 80px;
   }
 
   .piece-cell {
