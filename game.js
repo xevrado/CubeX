@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-const APP_VERSION = "1.0.8"; // Bu her APK yayınında güncellenmelidir
+const APP_VERSION = "1.1.0"; // Bu her APK yayınında güncellenmelidir
 
 // ---- Constants ----
 const BOARD_SIZE = 8;
@@ -987,13 +987,11 @@ function checkForUpdate() {
   const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
   if (!isAndroid || !navigator.onLine) return;
   
-  // En son sürümü GitHub Releases üzerinden kontrol et
-  fetch('https://api.github.com/repos/xevrado/CubeX/releases/latest')
-    .then(res => res.json())
-    .then(data => {
-      if (!data || !data.tag_name) return;
-      const latestVersion = data.tag_name; // Örn: "1.0.9"
-      
+  // Basit bir version.txt dosyasını kontrol et (GitHub API limitlerine takılmaz)
+  fetch('version.txt?t=' + Date.now())
+    .then(res => res.text())
+    .then(latestVersion => {
+      latestVersion = latestVersion.trim();
       if (latestVersion !== APP_VERSION) {
         const updatePopup = document.getElementById('updatePopup');
         const doUpdateBtn = document.getElementById('doUpdateBtn');
@@ -1013,7 +1011,7 @@ function checkForUpdate() {
         }
       }
     })
-    .catch(() => {});
+    .catch(err => console.error("Update check failed:", err));
 }
 
 // ---- Init ----

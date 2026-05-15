@@ -1,12 +1,12 @@
-const CACHE_NAME = 'cubex-v2026-05-15';
+const CACHE_NAME = 'cubex-v1.1.0';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/game.js',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
+  './',
+  'index.html',
+  'style.css',
+  'game.js',
+  'manifest.json',
+  'icon-192.png',
+  'icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap'
 ];
