@@ -534,13 +534,20 @@ function showScorePopup(pts) {
 let ghostEl = null;
 
 function onDragStart(e) {
-  e.preventDefault();
-  initAudio();
+  if (dragState) return;
+  
+  if (e.type === 'touchstart' && e.touches.length > 1) {
+    e.preventDefault();
+    return;
+  }
 
   const slot = e.currentTarget;
   const idx = parseInt(slot.dataset.pieceIndex);
   const piece = currentPieces[idx];
   if (!piece || piece.used) return;
+
+  e.preventDefault();
+  initAudio();
 
   sfxClick();
 
@@ -581,7 +588,11 @@ function onDragStart(e) {
   const touch = e.touches ? e.touches[0] : e;
   moveGhost(touch.clientX, touch.clientY);
 
-  dragState = { pieceIndex: idx, piece };
+  dragState = { 
+    pieceIndex: idx, 
+    piece, 
+    touchId: e.touches ? e.touches[0].identifier : null 
+  };
   slot.classList.add('used');
 
   // Bind move & end
@@ -611,7 +622,9 @@ function onDragMove(e) {
   if (now - lastDragTime < 16) return; // ~60fps ile sınırla (Throttling)
   lastDragTime = now;
 
-  const touch = e.touches ? e.touches[0] : e;
+  const touch = e.touches ? Array.from(e.touches).find(t => t.identifier === dragState.touchId) : e;
+  if (!touch) return;
+
   moveGhost(touch.clientX, touch.clientY);
   
   // RequestAnimationFrame kullanarak render'ı senkronize et
@@ -623,7 +636,9 @@ function onDragMove(e) {
 
 function onDragEnd(e) {
   if (!dragState) return;
-  const touch = e.changedTouches ? e.changedTouches[0] : e;
+  const touch = e.changedTouches ? Array.from(e.changedTouches).find(t => t.identifier === dragState.touchId) : e;
+  if (!touch) return;
+
   const target = getBoardPosition(touch.clientX, touch.clientY);
   
   clearHighlights();
