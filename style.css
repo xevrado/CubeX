@@ -110,9 +110,16 @@ body::before {
   max-width: 430px;
   margin: 0 auto;
   padding: calc(var(--safe-top) + 8px) 16px calc(var(--safe-bottom) + 8px);
-  gap: 16px; 
   overflow: hidden;
   justify-content: center;
+}
+
+.app-container > * {
+  margin-bottom: 16px;
+}
+
+.app-container > *:last-child {
+  margin-bottom: 0;
 }
 
 @media (max-height: 700px) {
@@ -138,7 +145,14 @@ body::before {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+}
+
+.header-left > * {
+  margin-right: 10px;
+}
+
+.header-left > *:last-child {
+  margin-right: 0;
 }
 
 .app-icon {
@@ -292,8 +306,11 @@ body::before {
 .score-section {
   width: min(calc(100vw - 50px), 376px); /* Align with board container */
   display: flex;
-  gap: 10px;
   align-items: stretch;
+}
+
+.score-section > .score-card {
+  margin-right: 10px;
 }
 
 .score-card {
@@ -368,7 +385,14 @@ body::before {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+}
+
+.stats-grid > .stat-card {
+  margin-bottom: 6px;
+}
+
+.stats-grid > .stat-card:last-child {
+  margin-bottom: 0;
 }
 
 .stat-card {
@@ -581,9 +605,16 @@ body::before {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 12px 8px;
-  gap: 6px;
   /* Match board container width perfectly */
   width: min(calc(100vw - 50px), 376px);
+}
+
+.piece-tray > .piece-slot {
+  margin-right: 6px;
+}
+
+.piece-tray > .piece-slot:last-child {
+  margin-right: 0;
 }
 
 .piece-slot {
@@ -1089,9 +1120,12 @@ body::before {
 .prompt-header {
   display: flex;
   align-items: center;
-  gap: 12px;
   margin-bottom: 16px;
   position: relative;
+}
+
+.prompt-header > .prompt-icon {
+  margin-right: 12px;
 }
 
 .prompt-icon {
@@ -1137,15 +1171,25 @@ body::before {
 .prompt-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+}
+
+.prompt-body > .step {
+  margin-bottom: 10px;
+}
+
+.prompt-body > .step:last-child {
+  margin-bottom: 0;
 }
 
 .prompt-body .step {
   display: flex;
   align-items: center;
-  gap: 10px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.9);
+}
+
+.prompt-body .step > .step-icon {
+  margin-right: 10px;
 }
 
 .step-icon {
