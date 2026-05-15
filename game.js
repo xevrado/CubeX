@@ -955,7 +955,7 @@ function checkForUpdate() {
         }
       }
     })
-    .catch(err => console.log('Update check failed:', err));
+    .catch(() => {});
 }
 
 // ---- Init ----
@@ -968,10 +968,9 @@ function initApp() {
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) downloadBtn.style.display = 'none';
     
-    // İnternet varsa ve github kodu değişmişse güncelleme uyarısı göster  // Check for update
-  }
-  if (navigator.onLine) {
-    setTimeout(checkForUpdate, 1500); 
+    if (navigator.onLine) {
+      setTimeout(checkForUpdate, 1000); 
+    }
   }
 
   // iOS Install Prompt Logic
