@@ -101,6 +101,9 @@ function initAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
 }
 
 // ---- Haptics (Capacitor) ----
@@ -920,12 +923,23 @@ closeHelpBtn.addEventListener('click', () => {
 
 restartBtn.addEventListener('click', () => {
   sfxClick();
-  if (score > 0 && confirm('Oyunu yeniden başlatmak istiyor musun?')) {
+  if (score > 10 && confirm('Oyunu yeniden başlatmak istiyor musun?')) {
     newGame();
-  } else if (score === 0) {
+  } else if (score <= 10) {
     newGame();
   }
 });
+
+const homeBtn = document.getElementById('homeBtn');
+if (homeBtn) {
+  homeBtn.addEventListener('click', () => {
+    sfxClick();
+    if (score > 10 && !confirm('Ana menüye dönmek istiyor musun? Mevcut ilerlemen kaybolacak.')) {
+      return;
+    }
+    document.getElementById('mainMenuOverlay').classList.add('active');
+  });
+}
 
 playAgainBtn.addEventListener('click', () => {
   sfxClick();
@@ -1005,6 +1019,7 @@ function initApp() {
   // Start Game Button
   if (startBtn) {
     startBtn.addEventListener('click', () => {
+      initAudio(); // Initialize audio context on first meaningful click
       sfxClick();
       mainMenuOverlay.classList.remove('active');
       newGame();

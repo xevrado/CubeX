@@ -7,10 +7,13 @@ CubeX, modern grafikleri ve akıcı oynanışıyla tasarlanmış bir bulmaca oyu
 - **Android (APK):** [CubeX APK İndir](https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk)
 
 ## 🚀 Özellikler
-- **Akıcı Performans:** GPU hızlandırmalı grafikler ve optimize edilmiş oyun motoru.
-- **Haptic Feedback:** iOS ve Android cihazlarda gerçekçi dokunsal geri bildirim.
-- **Akıllı Sistem:** Boş alanlara uygun parça gelmesi için akıllı sistem tasarlanmıştır.
-- **Modern Tasarım:** Dinamik arka plan ve şık "iOS Premium" arayüz.
+- **Premium Giriş Menüsü:** Profesyonel ana ekran ve sosyal medya bağlantıları.
+- **Kesintisiz Navigasyon:** Oyun içinden ana menüye dönebilme ve gelişmiş oyun sonu kontrolleri.
+- **iOS & Android Optimizasyonu:** GPU hızlandırmalı animasyonlar ve takılmasız hat temizleme mantığı.
+- **Smart Install Prompt:** iOS Safari kullanıcıları için ana ekrana ekleme rehberi.
+- **Haptic Feedback:** Capacitor Haptics ile fiziksel geri bildirim.
+- **Gelişmiş Ses:** Web Audio API ile düşük gecikmeli retro ses efektleri.
+- **Karanlık Mod & Glassmorphism:** Göz yormayan, modern ve şık arayüz tasarımı.
 
 ## 🛡️ Güvenlik ve Doğrulama
 Kullanıcılarımızın güvenliği bizim için önceliklidir. Uygulamamızın APK dosyası VirusTotal üzerinden taranmış ve tamamen güvenli olduğu doğrulanmıştır.
