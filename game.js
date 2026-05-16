@@ -1192,6 +1192,12 @@ function checkForUpdate() {
         }
         
         return; // Bakım varsa Android güncelleme uyarısını gösterme
+      } else {
+        const overlay = document.getElementById('maintenanceOverlay');
+        if (overlay) {
+          overlay.classList.remove('active');
+          overlay.style.display = 'none';
+        }
       }
 
       // 2. Android APK Güncelleme Kontrolü
