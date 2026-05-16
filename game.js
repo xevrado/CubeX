@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-const APP_VERSION = "1.1.0"; // Bu her APK yayınında güncellenmelidir
+const APP_VERSION = "1.1.1"; // Bu her APK yayınında güncellenmelidir
 
 // ---- Constants ----
 const BOARD_SIZE = 8;
@@ -1099,12 +1099,21 @@ function checkForUpdate() {
   const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
   if (!isAndroid || !navigator.onLine) return;
   
-  // Basit bir version.txt dosyasını kontrol et (GitHub API limitlerine takılmaz)
-  fetch('https://raw.githubusercontent.com/xevrado/CubeX/main/version.txt?t=' + Date.now())
-    .then(res => res.text())
-    .then(latestVersion => {
-      latestVersion = latestVersion.trim();
-      if (latestVersion !== APP_VERSION) {
+  // JSON tabanlı daha güvenli güncelleme sistemi
+  fetch('https://raw.githubusercontent.com/xevrado/CubeX/main/update.json?t=' + Date.now())
+    .then(res => {
+      if (!res.ok) throw new Error("Ağ hatası");
+      return res.json();
+    })
+    .then(data => {
+      // JSON formatında değilse veya version eksikse (yanlış kod girilmişse) güncellemeyi atla
+      if (!data || typeof data.version !== 'string') return;
+      
+      // Sürüm numarası doğrulama (örn. 1.1.0 veya 1.1.1 formatında olmalı)
+      const versionRegex = /^\\d+\\.\\d+\\.\\d+$/;
+      if (!versionRegex.test(data.version)) return;
+
+      if (data.version !== APP_VERSION) {
         const updatePopup = document.getElementById('updatePopup');
         const doUpdateBtn = document.getElementById('doUpdateBtn');
         const closeUpdateBtn = document.getElementById('closeUpdateBtn');
@@ -1112,14 +1121,13 @@ function checkForUpdate() {
         if (updatePopup && doUpdateBtn) {
           updatePopup.style.display = 'block';
           
-          // onclick kullanarak listener birikimini önle (Memory Leak Fix)
+          // onclick kullanarak listener birikimini önle
           doUpdateBtn.onclick = async () => {
+            const apkUrl = data.downloadUrl || 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk';
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
-              await window.Capacitor.Plugins.Browser.open({ 
-                url: 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk' 
-              });
+              await window.Capacitor.Plugins.Browser.open({ url: apkUrl });
             } else {
-              window.location.href = 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk';
+              window.location.href = apkUrl;
             }
           };
 
@@ -1132,7 +1140,10 @@ function checkForUpdate() {
         }
       }
     })
-    .catch(err => console.error("Update check failed:", err));
+    .catch(err => {
+      // JSON parse hatası veya ağ hatası durumunda sessizce geç (hatalı kod koruması)
+      console.warn("Update check safely ignored:", err.message);
+    });
 }
 
 // ---- Menu Button Helpers ----
