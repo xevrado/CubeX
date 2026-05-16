@@ -1,6 +1,6 @@
 {
   "name": "cubex",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "CubeX – Puzzle Game",
   "scripts": {
     "build": "if not exist www mkdir www && copy index.html www\\ /Y && copy style.css www\\ /Y && copy game.js www\\ /Y && copy manifest.json www\\ /Y && copy icon-192.png www\\ /Y && copy icon-512.png www\\ /Y && copy update.json www\\ /Y && copy sw.js www\\ /Y && copy version.txt www\\ /Y",
