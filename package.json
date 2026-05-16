@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "CubeX – Puzzle Game",
   "scripts": {
-    "build": "if not exist www mkdir www && copy index.html www\\ /Y && copy style.css www\\ /Y && copy game.js www\\ /Y && copy manifest.json www\\ /Y && copy icon-192.png www\\ /Y && copy icon-512.png www\\ /Y",
+    "build": "if not exist www mkdir www && copy index.html www\\ /Y && copy style.css www\\ /Y && copy game.js www\\ /Y && copy manifest.json www\\ /Y && copy icon-192.png www\\ /Y && copy icon-512.png www\\ /Y && copy update.json www\\ /Y && copy sw.js www\\ /Y && copy version.txt www\\ /Y",
     "sync": "npx cap sync android",
     "open": "npx cap open android",
     "sync:ios": "npx cap sync ios",
