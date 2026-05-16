@@ -3,7 +3,8 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "ERROR"; // Bu değer artık otomatik olarak update.json'dan çekiliyor
+let APP_VERSION = "1.1.1"; // Dosyadan okuma (file://) başarısız olursa kullanılacak varsayılan
+let localFetchSuccess = false;
 
 // ---- Constants ----
 const BOARD_SIZE = 8;
@@ -1207,7 +1208,7 @@ function checkForUpdate() {
       const versionRegex = /^\\d+\\.\\d+\\.\\d+$/;
       if (!versionRegex.test(data.version)) return;
 
-      if (APP_VERSION === "ERROR") return; // Güvenlik kilidi: Yerel sürüm okunamadıysa güncelleme sorma
+      if (!localFetchSuccess) return; // Güvenlik kilidi: Yerel sürüm okunamadıysa güncelleme sorma
 
       if (data.version !== APP_VERSION) {
         const updatePopup = document.getElementById('updatePopup');
@@ -1288,6 +1289,7 @@ function initApp() {
     .then(data => {
       if (data && data.version) {
         APP_VERSION = data.version;
+        localFetchSuccess = true;
       }
       renderVersionDisplay();
     })
