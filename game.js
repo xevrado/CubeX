@@ -1134,20 +1134,63 @@ function checkForUpdate() {
           title.style.fontFamily = "'SF Pro Display', sans-serif";
           
           const msg = document.createElement('p');
-          msg.textContent = data.maintenanceMessage || 'Sunucularımızda bakım çalışması yapılmaktadır. Lütfen daha sonra tekrar deneyiniz.';
+          msg.id = 'maintenanceMsgText';
           msg.style.color = '#cbd5e1';
           msg.style.textAlign = 'center';
           msg.style.maxWidth = '80%';
           msg.style.lineHeight = '1.6';
           msg.style.fontFamily = "'Inter', sans-serif";
           
+          const timeBadge = document.createElement('div');
+          timeBadge.id = 'maintenanceTimeBadge';
+          timeBadge.style.marginTop = '25px';
+          timeBadge.style.padding = '10px 20px';
+          timeBadge.style.background = 'rgba(234, 179, 8, 0.15)';
+          timeBadge.style.border = '1px solid rgba(234, 179, 8, 0.3)';
+          timeBadge.style.borderRadius = '12px';
+          timeBadge.style.color = '#eab308';
+          timeBadge.style.fontFamily = "'Inter', sans-serif";
+          timeBadge.style.fontSize = '15px';
+          timeBadge.style.fontWeight = '600';
+          timeBadge.style.display = 'none';
+          timeBadge.style.alignItems = 'center';
+          timeBadge.style.gap = '10px';
+          
+          const clockIcon = document.createElement('i');
+          clockIcon.className = 'far fa-clock';
+          timeBadge.appendChild(clockIcon);
+          
+          const timeText = document.createElement('span');
+          timeText.id = 'maintenanceTimeText';
+          timeBadge.appendChild(timeText);
+          
           overlay.appendChild(icon);
           overlay.appendChild(title);
           overlay.appendChild(msg);
+          overlay.appendChild(timeBadge);
+          
           document.body.appendChild(overlay);
-        } else {
-          overlay.classList.add('active');
         }
+        
+        // Mevcut overlay'i güncelle ve göster
+        overlay.classList.add('active');
+        
+        const msgEl = document.getElementById('maintenanceMsgText');
+        if (msgEl) {
+          msgEl.textContent = data.maintenanceMessage || 'Sunucularımızda bakım çalışması yapılmaktadır. Lütfen daha sonra tekrar deneyiniz.';
+        }
+        
+        const badgeEl = document.getElementById('maintenanceTimeBadge');
+        const timeEl = document.getElementById('maintenanceTimeText');
+        if (badgeEl && timeEl) {
+          if (data.maintenanceEndTime) {
+            badgeEl.style.display = 'flex';
+            timeEl.textContent = data.maintenanceEndTime;
+          } else {
+            badgeEl.style.display = 'none';
+          }
+        }
+        
         return; // Bakım varsa Android güncelleme uyarısını gösterme
       }
 
