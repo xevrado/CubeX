@@ -2,6 +2,10 @@
    CUBEX — Full Game Logic
    ========================================= */
 
+// ---- Version (Android APK Update Check) ----
+let APP_VERSION = "Test Modu"; // Dosyadan okuma (file://) başarısız olursa
+let localFetchSuccess = false;
+
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -93,6 +97,8 @@ let dragState = null;    // active drag info
 let cellElements = [];   // cached DOM elements for the board
 let highlightedCells = new Set(); // Sadece vurgulanan hücreleri tut (Performans)
 let dragRafId = null;    // rAF id for drag optimization
+let clearingInProgress = false; // Satır temizleme animasyonu sırasında yerleştirmeyi engelle
+let gameActive = false;  // Aktif bir oyun var mı?
 
 // ---- Audio (Web Audio API — tiny synth) ----
 let audioCtx = null;
@@ -101,7 +107,29 @@ function initAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
 }
+
+// ---- Haptics (Capacitor) ----
+const haptics = {
+  impact: (style = 'MEDIUM') => {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+      window.Capacitor.Plugins.Haptics.impact({ style });
+    }
+  },
+  notification: (type = 'SUCCESS') => {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+      window.Capacitor.Plugins.Haptics.notification({ type });
+    }
+  },
+  vibrate: () => {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+      window.Capacitor.Plugins.Haptics.vibrate();
+    }
+  }
+};
 
 function playTone(freq, duration, type = 'sine', vol = 0.12) {
   if (!soundOn || !audioCtx) return;
@@ -130,8 +158,8 @@ const boardEl        = document.getElementById('gameBoard');
 const scoreEl        = document.getElementById('scoreDisplay');
 const bestEl         = document.getElementById('bestDisplay');
 const levelEl        = document.getElementById('levelDisplay');
-const comboEl        = document.getElementById('comboCount');
-const comboBadge     = document.getElementById('comboDisplay');
+const comboCountEl   = document.getElementById('comboCount');
+const comboDisplayEl = document.getElementById('comboDisplay');
 const trayEl         = document.getElementById('pieceTray');
 const clearFlashEl   = document.getElementById('clearFlash');
 const scorePopupEl   = document.getElementById('scorePopup');
@@ -352,6 +380,7 @@ function renderTray() {
     // Clean up old listeners to prevent duplicates
     const newSlot = slot.cloneNode(false);
     slot.parentNode.replaceChild(newSlot, slot);
+    newSlot.dataset.pieceIndex = i;
 
     const piece = currentPieces[i];
     if (!piece || piece.used) {
@@ -417,76 +446,112 @@ function canPlaceAnywhere(piece) {
 
 // ---- Clear Lines ----
 function checkAndClear() {
-  const rowsToClear = [];
-  const colsToClear = [];
+  try {
+    const rowsToClear = [];
+    const colsToClear = [];
 
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    if (board[r].every(c => c !== null)) rowsToClear.push(r);
-  }
-  for (let c = 0; c < BOARD_SIZE; c++) {
-    let full = true;
+    // 1. Detection
     for (let r = 0; r < BOARD_SIZE; r++) {
-      if (board[r][c] === null) { full = false; break; }
+      if (board[r] && board[r].every(cell => cell !== null)) {
+        rowsToClear.push(r);
+      }
     }
-    if (full) colsToClear.push(c);
-  }
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      let isFull = true;
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        if (!board[r] || board[r][c] === null) {
+          isFull = false;
+          break;
+        }
+      }
+      if (isFull) colsToClear.push(c);
+    }
 
-  const linesCleared = rowsToClear.length + colsToClear.length;
-  if (linesCleared === 0) {
-    combo = 0;
-    comboEl.textContent = 'x1';
-    comboBadge.textContent = '';
+    const linesCleared = rowsToClear.length + colsToClear.length;
+    if (linesCleared === 0) {
+      combo = 0;
+      if (comboCountEl) comboCountEl.textContent = 'x1';
+      if (comboDisplayEl) comboDisplayEl.textContent = '';
+      return 0;
+    }
+
+    // 2. Identify and NULLIFY immediately
+    const cellsToClear = [];
+    const processed = new Array(BOARD_SIZE * BOARD_SIZE).fill(false);
+
+    const addCell = (r, c) => {
+      const idx = r * BOARD_SIZE + c;
+      if (!processed[idx]) {
+        cellsToClear.push({ r, c });
+        processed[idx] = true;
+        board[r][c] = null; // NULLIFY DATA NOW
+      }
+    };
+
+    rowsToClear.forEach(r => {
+      for (let c = 0; c < BOARD_SIZE; c++) addCell(r, c);
+    });
+    colsToClear.forEach(c => {
+      for (let r = 0; r < BOARD_SIZE; r++) addCell(r, c);
+    });
+
+    // 3. Feedback (Non-blocking)
+    combo++;
+    try {
+      haptics.impact(combo > 1 ? 'HEAVY' : 'MEDIUM');
+      if (linesCleared >= 2) createConfetti();
+    } catch (err) {}
+
+    // 4. Visual Animation — Race condition koruması
+    clearingInProgress = true;
+    cellsToClear.forEach(({ r, c }) => {
+      const el = getCellEl(r, c);
+      if (el) {
+        el.classList.add('explode');
+        el.style.willChange = 'transform, opacity';
+      }
+    });
+
+    if (clearFlashEl) {
+      clearFlashEl.classList.remove('flash');
+      void clearFlashEl.offsetWidth;
+      clearFlashEl.classList.add('flash');
+    }
+
+    // 5. Final Sync
+    setTimeout(() => {
+      cellsToClear.forEach(({ r, c }) => {
+        const el = getCellEl(r, c);
+        if (el) {
+          el.classList.remove('explode');
+          el.style.willChange = 'auto';
+        }
+      });
+      clearingInProgress = false;
+      renderBoard();
+    }, 350);
+
+    // 6. Score
+    let points = linesCleared * 10 * BOARD_SIZE;
+    if (combo > 1) {
+      points = Math.floor(points * (1 + combo * 0.5));
+      sfxCombo();
+      if (comboDisplayEl) comboDisplayEl.textContent = '🔥 COMBO x' + combo + '!';
+    } else {
+      sfxClear();
+      if (comboDisplayEl) comboDisplayEl.textContent = '';
+    }
+
+    if (comboCountEl) comboCountEl.textContent = 'x' + Math.max(1, combo);
+    addScore(points);
+    showScorePopup(points);
+
+    return linesCleared;
+  } catch (globalErr) {
+    console.error("Line clearing error:", globalErr);
+    renderBoard(); // Fallback to safe state
     return 0;
   }
-
-  combo++;
-
-  // Animate explode
-  const cellsToExplode = new Set();
-  for (const r of rowsToClear) {
-    for (let c = 0; c < BOARD_SIZE; c++) cellsToExplode.add(r + ',' + c);
-  }
-  for (const c of colsToClear) {
-    for (let r = 0; r < BOARD_SIZE; r++) cellsToExplode.add(r + ',' + c);
-  }
-
-  cellsToExplode.forEach(key => {
-    const [r, c] = key.split(',').map(Number);
-    const el = getCellEl(r, c);
-    if (el) el.classList.add('explode');
-  });
-
-  // Flash effect
-  clearFlashEl.classList.remove('flash');
-  void clearFlashEl.offsetWidth;
-  clearFlashEl.classList.add('flash');
-
-  // Clear board data after animation
-  setTimeout(() => {
-    cellsToExplode.forEach(key => {
-      const [r, c] = key.split(',').map(Number);
-      board[r][c] = null;
-    });
-    renderBoard();
-  }, 350);
-
-  // Score
-  let points = linesCleared * 10 * BOARD_SIZE;
-  if (combo > 1) {
-    points = Math.floor(points * (1 + combo * 0.5));
-    sfxCombo();
-    comboBadge.textContent = '🔥 COMBO x' + combo + '!';
-  } else {
-    sfxClear();
-    comboBadge.textContent = '';
-  }
-
-  comboEl.textContent = 'x' + Math.max(1, combo);
-
-  addScore(points);
-  showScorePopup(points);
-
-  return linesCleared;
 }
 
 function addScore(pts) {
@@ -518,6 +583,9 @@ function addScore(pts) {
     bestScore = score;
     bestEl.textContent = bestScore;
     localStorage.setItem('cubex_best', bestScore);
+    // Update menu score too
+    const menuBestDisplay = document.getElementById('menuBestDisplay');
+    if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
   }
 }
 
@@ -534,14 +602,27 @@ function showScorePopup(pts) {
 let ghostEl = null;
 
 function onDragStart(e) {
-  e.preventDefault();
-  initAudio();
+  // Prevent default early to avoid browser interference (scrolling, etc.)
+  if (e.cancelable) e.preventDefault();
+
+  if (dragState) return;
+  
+  if (e.type === 'touchstart' && e.touches.length > 1) {
+    return;
+  }
 
   const slot = e.currentTarget;
   const idx = parseInt(slot.dataset.pieceIndex);
   const piece = currentPieces[idx];
   if (!piece || piece.used) return;
 
+  // Safety: Cleanup any stray ghosts from previous failed drags
+  if (ghostEl) {
+    ghostEl.remove();
+    ghostEl = null;
+  }
+
+  initAudio();
   sfxClick();
 
   // Calculate current board cell size for perfect ghost matching
@@ -569,19 +650,29 @@ function onDragStart(e) {
         // Match the board cell look
         cell.style.width = cellSize + 'px';
         cell.style.height = cellSize + 'px';
+        cell.style.userSelect = 'none';
+        cell.style.webkitUserSelect = 'none';
+        cell.style.pointerEvents = 'none';
       } else {
         cell.style.visibility = 'hidden';
       }
       ghostEl.appendChild(cell);
     }
   }
+  ghostEl.style.userSelect = 'none';
+  ghostEl.style.webkitUserSelect = 'none';
+  ghostEl.style.touchAction = 'none';
   document.body.appendChild(ghostEl);
 
   // Position ghost
   const touch = e.touches ? e.touches[0] : e;
   moveGhost(touch.clientX, touch.clientY);
 
-  dragState = { pieceIndex: idx, piece };
+  dragState = { 
+    pieceIndex: idx, 
+    piece, 
+    touchId: e.touches ? e.touches[0].identifier : null 
+  };
   slot.classList.add('used');
 
   // Bind move & end
@@ -589,6 +680,8 @@ function onDragStart(e) {
     document.addEventListener('touchmove', onDragMove, { passive: false });
     document.addEventListener('touchend', onDragEnd);
     document.addEventListener('touchcancel', onDragCancel);
+    // Drag sırasında iOS scroll bounce'u engelle (dinamik — sadece drag aktifken)
+    document.body.addEventListener('touchmove', preventScrollDuringDrag, { passive: false });
   } else {
     document.addEventListener('mousemove', onDragMove);
     document.addEventListener('mouseup', onDragEnd);
@@ -611,7 +704,9 @@ function onDragMove(e) {
   if (now - lastDragTime < 16) return; // ~60fps ile sınırla (Throttling)
   lastDragTime = now;
 
-  const touch = e.touches ? e.touches[0] : e;
+  const touch = e.touches ? Array.from(e.touches).find(t => t.identifier === dragState.touchId) : e;
+  if (!touch) return;
+
   moveGhost(touch.clientX, touch.clientY);
   
   // RequestAnimationFrame kullanarak render'ı senkronize et
@@ -623,35 +718,40 @@ function onDragMove(e) {
 
 function onDragEnd(e) {
   if (!dragState) return;
-  const touch = e.changedTouches ? e.changedTouches[0] : e;
+  const touch = e.changedTouches ? Array.from(e.changedTouches).find(t => t.identifier === dragState.touchId) : e;
+  if (!touch) return;
+
   const target = getBoardPosition(touch.clientX, touch.clientY);
   
   clearHighlights();
 
-  if (target && canPlace(dragState.piece.cells, target.row, target.col)) {
-    // Place piece
+  if (target && !clearingInProgress && canPlace(dragState.piece.cells, target.row, target.col)) {
+    // Place piece (clearingInProgress kontrolü race condition'ı önler)
     placePiece(dragState.piece, target.row, target.col);
     currentPieces[dragState.pieceIndex].used = true;
     sfxPlace();
+    haptics.impact('LIGHT');
 
     // Add small points for placing
     addScore(dragState.piece.cells.length);
 
     renderBoard();
+    checkAndClear();
 
-    // Check clears
-    setTimeout(() => {
-      checkAndClear();
-
-      // Check if all 3 used → new set
-      if (currentPieces.every(p => p.used)) {
+    // Check if all 3 used → new set
+    if (currentPieces.every(p => p.used)) {
+      setTimeout(() => {
         generatePieces();
-      }
+        renderTray();
+        saveGameState(); // Yeni parçalar oluşturulduktan sonra kaydet
+      }, 300);
+    } else {
       renderTray();
+      saveGameState(); // Her parça yerleştirmede kaydet
+    }
 
-      // Check game over
-      setTimeout(() => checkGameOver(), 400);
-    }, 50);
+    // Check game over
+    setTimeout(() => checkGameOver(), 600);
 
   } else {
     // Return piece
@@ -683,6 +783,7 @@ function cleanupDrag() {
   document.removeEventListener('touchmove', onDragMove);
   document.removeEventListener('touchend', onDragEnd);
   document.removeEventListener('touchcancel', onDragCancel);
+  document.body.removeEventListener('touchmove', preventScrollDuringDrag);
   document.removeEventListener('mousemove', onDragMove);
   document.removeEventListener('mouseup', onDragEnd);
 }
@@ -809,6 +910,7 @@ function gameOver() {
   finalBestEl.textContent = bestScore;
   finalLevelEl.textContent = level;
   gameOverOverlay.classList.add('active');
+  clearGameState(); // Oyun bitti, kaydı temizle
 }
 
 // ---- New Game ----
@@ -818,8 +920,8 @@ function newGame() {
   combo = 0;
   scoreEl.textContent = '0';
   levelEl.textContent = '1';
-  comboEl.textContent = 'x1';
-  comboBadge.textContent = '';
+  comboCountEl.textContent = 'x1';
+  comboDisplayEl.textContent = '';
   bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
   bestEl.textContent = bestScore;
   gameOverOverlay.classList.remove('active');
@@ -828,13 +930,81 @@ function newGame() {
   renderBoard();
   generatePieces();
   renderTray();
+  gameActive = true;
+  saveGameState();
+}
+
+// ---- Save / Load Game State ----
+function saveGameState() {
+  try {
+    const state = {
+      board: board,
+      score: score,
+      level: level,
+      combo: combo,
+      currentPieces: currentPieces.map(p => ({
+        cells: p.cells,
+        color: p.color,
+        used: p.used,
+        name: p.name
+      })),
+      gameActive: gameActive
+    };
+    localStorage.setItem('cubex_gameState', JSON.stringify(state));
+  } catch (e) {
+    console.error('Game state save error:', e);
+  }
+}
+
+function loadGameState() {
+  try {
+    const saved = localStorage.getItem('cubex_gameState');
+    if (!saved) return false;
+    
+    const state = JSON.parse(saved);
+    if (!state || !state.board || !state.currentPieces || !state.gameActive) return false;
+    
+    // Validate board
+    if (state.board.length !== BOARD_SIZE) return false;
+    
+    board = state.board;
+    score = state.score || 0;
+    level = state.level || 1;
+    combo = state.combo || 0;
+    currentPieces = state.currentPieces || [];
+    gameActive = true;
+    
+    // Update UI
+    scoreEl.textContent = score;
+    levelEl.textContent = level;
+    comboCountEl.textContent = 'x' + Math.max(1, combo);
+    comboDisplayEl.textContent = '';
+    bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
+    bestEl.textContent = bestScore;
+    
+    createBoard();
+    // Restore board data after createBoard (which resets the array)
+    board = state.board;
+    renderBoard();
+    renderTray();
+    
+    return true;
+  } catch (e) {
+    console.error('Game state load error:', e);
+    return false;
+  }
+}
+
+function clearGameState() {
+  localStorage.removeItem('cubex_gameState');
+  gameActive = false;
 }
 
 // ---- Button Events ----
 soundBtn.addEventListener('click', () => {
   initAudio();
   soundOn = !soundOn;
-  soundBtn.textContent = soundOn ? '🔊' : '🔇';
+  soundBtn.innerHTML = soundOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
   sfxClick();
 });
 
@@ -850,78 +1020,421 @@ closeHelpBtn.addEventListener('click', () => {
 
 restartBtn.addEventListener('click', () => {
   sfxClick();
-  if (score > 0 && confirm('Oyunu yeniden başlatmak istiyor musun?')) {
-    newGame();
-  } else if (score === 0) {
+  if (score > 10) {
+    showConfirm('Oyunu yeniden başlatmak istiyor musun?', () => {
+      newGame();
+    });
+  } else {
     newGame();
   }
 });
+
+const homeBtn = document.getElementById('homeBtn');
+if (homeBtn) {
+  homeBtn.addEventListener('click', () => {
+    sfxClick();
+    // Oyun durumunu kaydet (sıfırlanmasın)
+    if (gameActive) {
+      saveGameState();
+    }
+    updateMenuButtons(); // Menü butonlarını güncelle
+    document.getElementById('mainMenuOverlay').classList.add('active');
+  });
+}
 
 playAgainBtn.addEventListener('click', () => {
   sfxClick();
   newGame();
 });
 
-// Prevent scroll bounce on iOS
-document.body.addEventListener('touchmove', e => {
+const backToMenuBtn = document.getElementById('backToMenuBtn');
+if (backToMenuBtn) {
+  backToMenuBtn.addEventListener('click', () => {
+    sfxClick();
+    clearGameState(); // Oyun bitti, kaydı temizle
+    gameOverOverlay.classList.remove('active');
+    updateMenuButtons();
+    document.getElementById('mainMenuOverlay').classList.add('active');
+  });
+}
+
+// iOS scroll bounce engelleyici — sadece drag sırasında aktif (performans optimizasyonu)
+function preventScrollDuringDrag(e) {
   if (dragState) e.preventDefault();
-}, { passive: false });
+}
 
 // ---- Window resize ----
 window.addEventListener('resize', () => {
   renderBoard();
 });
 
+// ---- Custom Confirm Dialog ----
+function showConfirm(message, onYes, onNo) {
+  const overlay = document.getElementById('confirmOverlay');
+  const msgEl = document.getElementById('confirmMessage');
+  const yesBtn = document.getElementById('confirmYes');
+  const noBtn = document.getElementById('confirmNo');
+  
+  if (!overlay || !yesBtn || !noBtn) {
+    // Fallback: direkt çalıştır
+    if (onYes) onYes();
+    return;
+  }
+  
+  if (msgEl) msgEl.textContent = message;
+  overlay.classList.add('active');
+  
+  // Eski listener'ları temizle
+  yesBtn.onclick = () => {
+    overlay.classList.remove('active');
+    if (onYes) onYes();
+  };
+  noBtn.onclick = () => {
+    overlay.classList.remove('active');
+    if (onNo) onNo();
+  };
+}
+
 // ---- Update Logic ----
 function checkForUpdate() {
-  if (!navigator.onLine) return; // Sadece internet varsa kontrol et
+  if (!navigator.onLine) return;
+  const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
   
-  fetch('https://api.github.com/repos/xevrado/CubeX/commits/main')
-    .then(res => res.json())
+  // JSON tabanlı daha güvenli güncelleme sistemi
+  fetch('https://raw.githubusercontent.com/xevrado/CubeX/main/update.json?t=' + Date.now())
+    .then(res => {
+      if (!res.ok) throw new Error("Ağ hatası");
+      return res.json();
+    })
     .then(data => {
-      if (!data || !data.sha) return;
-      const latestSha = data.sha;
-      const currentSha = localStorage.getItem('cubex_last_commit');
+      if (!data) return;
+
+      // 1. Bakım Molası Kontrolü (Tüm Platformlar)
+      if (data.maintenance === true) {
+        let overlay = document.getElementById('maintenanceOverlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'maintenanceOverlay';
+          overlay.className = 'overlay active';
+          overlay.style.zIndex = '99999';
+          overlay.style.flexDirection = 'column';
+          overlay.style.justifyContent = 'center';
+          overlay.style.alignItems = 'center';
+          overlay.style.background = 'rgba(15, 23, 42, 0.98)';
+          
+          const icon = document.createElement('i');
+          icon.className = 'fas fa-tools';
+          icon.style.fontSize = '4rem';
+          icon.style.color = '#eab308';
+          icon.style.marginBottom = '20px';
+          
+          const title = document.createElement('h2');
+          title.textContent = 'Bakım Molası';
+          title.style.color = 'white';
+          title.style.marginBottom = '15px';
+          title.style.fontFamily = "'SF Pro Display', sans-serif";
+          
+          const msg = document.createElement('p');
+          msg.id = 'maintenanceMsgText';
+          msg.style.color = '#cbd5e1';
+          msg.style.textAlign = 'center';
+          msg.style.maxWidth = '80%';
+          msg.style.lineHeight = '1.6';
+          msg.style.fontFamily = "'Inter', sans-serif";
+          
+          const timeBadge = document.createElement('div');
+          timeBadge.id = 'maintenanceTimeBadge';
+          timeBadge.style.marginTop = '25px';
+          timeBadge.style.padding = '10px 20px';
+          timeBadge.style.background = 'rgba(234, 179, 8, 0.15)';
+          timeBadge.style.border = '1px solid rgba(234, 179, 8, 0.3)';
+          timeBadge.style.borderRadius = '12px';
+          timeBadge.style.color = '#eab308';
+          timeBadge.style.fontFamily = "'Inter', sans-serif";
+          timeBadge.style.fontSize = '15px';
+          timeBadge.style.fontWeight = '600';
+          timeBadge.style.display = 'none';
+          timeBadge.style.alignItems = 'center';
+          timeBadge.style.gap = '10px';
+          
+          const clockIcon = document.createElement('i');
+          clockIcon.className = 'far fa-clock';
+          timeBadge.appendChild(clockIcon);
+          
+          const timeText = document.createElement('span');
+          timeText.id = 'maintenanceTimeText';
+          timeBadge.appendChild(timeText);
+          
+          overlay.appendChild(icon);
+          overlay.appendChild(title);
+          overlay.appendChild(msg);
+          overlay.appendChild(timeBadge);
+          
+          document.body.appendChild(overlay);
+        }
+        
+        // Mevcut overlay'i güncelle ve göster
+        overlay.classList.add('active');
+        
+        const msgEl = document.getElementById('maintenanceMsgText');
+        if (msgEl) {
+          msgEl.textContent = data.maintenanceMessage || 'Sunucularımızda bakım çalışması yapılmaktadır. Lütfen daha sonra tekrar deneyiniz.';
+        }
+        
+        const badgeEl = document.getElementById('maintenanceTimeBadge');
+        const timeEl = document.getElementById('maintenanceTimeText');
+        if (badgeEl && timeEl) {
+          if (data.maintenanceEndTime) {
+            badgeEl.style.display = 'flex';
+            timeEl.textContent = data.maintenanceEndTime;
+          } else {
+            badgeEl.style.display = 'none';
+          }
+        }
+        
+        return; // Bakım varsa Android güncelleme uyarısını gösterme
+      } else {
+        const overlay = document.getElementById('maintenanceOverlay');
+        if (overlay) {
+          overlay.classList.remove('active');
+          overlay.style.display = 'none';
+        }
+      }
+
+      // 2. Android APK Güncelleme Kontrolü
+      if (!isAndroid || typeof data.version !== 'string') return;
       
-      if (!currentSha) {
-        // İlk giriş, sadece kaydet
-        localStorage.setItem('cubex_last_commit', latestSha);
-      } else if (currentSha !== latestSha) {
-        // Yeni güncelleme var (commit değişmiş)
+      // Sürüm numarası doğrulama (örn. 1.1.0, 1.1.1 veya 1.1.1.1 formatında olmalı)
+      const versionRegex = /^\d+\.\d+\.\d+(\.\d+)?$/;
+      if (!versionRegex.test(data.version)) return;
+
+      if (!localFetchSuccess || APP_VERSION === "Test Modu") return; // Güvenlik kilidi: Sürüm doğrulanamadıysa popup gösterme
+
+      if (data.version !== APP_VERSION) {
         const updatePopup = document.getElementById('updatePopup');
         const doUpdateBtn = document.getElementById('doUpdateBtn');
         const closeUpdateBtn = document.getElementById('closeUpdateBtn');
         
-        if (updatePopup && doUpdateBtn && closeUpdateBtn) {
+        if (updatePopup && doUpdateBtn) {
           updatePopup.style.display = 'block';
           
-          doUpdateBtn.addEventListener('click', () => {
-            localStorage.setItem('cubex_last_commit', latestSha);
-            window.location.reload(true);
-          });
-          
-          closeUpdateBtn.addEventListener('click', () => {
-            updatePopup.style.display = 'none';
-          });
+          // onclick kullanarak listener birikimini önle
+          doUpdateBtn.onclick = async () => {
+            const apkUrl = data.downloadUrl || 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk';
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+              await window.Capacitor.Plugins.Browser.open({ url: apkUrl });
+            } else {
+              window.location.href = apkUrl;
+            }
+          };
+
+          // Kapatma butonu bağlantısı
+          if (closeUpdateBtn) {
+            closeUpdateBtn.onclick = () => {
+              updatePopup.style.display = 'none';
+            };
+          }
         }
       }
     })
-    .catch(err => console.log('Update check failed:', err));
+    .catch(err => {
+      // JSON parse hatası veya ağ hatası durumunda sessizce geç
+      console.warn("Update check safely ignored:", err.message);
+    });
+}
+
+// ---- Menu Button Helpers ----
+function updateMenuButtons() {
+  const startBtn = document.getElementById('startBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
+  
+  if (gameActive) {
+    // Aktif oyun var: her iki butonu da göster
+    if (resumeBtn) resumeBtn.style.display = '';
+    if (startBtn) startBtn.style.display = '';
+  } else {
+    // Aktif oyun yok: sadece "Yeni Oyun" göster
+    if (resumeBtn) resumeBtn.style.display = 'none';
+    if (startBtn) startBtn.style.display = '';
+  }
+  
+  // Best score güncelle
+  const menuBestDisplay = document.getElementById('menuBestDisplay');
+  if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
 }
 
 // ---- Init ----
-function initApp() {
-  createParticles();
-  newGame();
-  
-  // Uygulama (Capacitor) içindeysek İndir butonunu gizle ve Güncelleme kontrolü yap
-  if (window.Capacitor && window.Capacitor.getPlatform() !== 'web') {
-    const downloadBtn = document.getElementById('downloadBtn');
-    if (downloadBtn) downloadBtn.style.display = 'none';
-    
-    // İnternet varsa ve github kodu değişmişse güncelleme uyarısı göster (sadece mobil uygulama)
-    setTimeout(checkForUpdate, 1500); // Uygulama açıldıktan 1.5 sn sonra kontrol et
+function renderVersionDisplay() {
+  let vEl = document.getElementById('versionDisplay');
+  if (!vEl) {
+    vEl = document.createElement('div');
+    vEl.id = 'versionDisplay';
+    vEl.style.position = 'fixed';
+    vEl.style.bottom = '8px';
+    vEl.style.right = '8px';
+    vEl.style.color = 'rgba(255, 255, 255, 0.4)';
+    vEl.style.fontSize = '12px';
+    vEl.style.fontFamily = "'Inter', sans-serif";
+    vEl.style.pointerEvents = 'none';
+    vEl.style.zIndex = '99999';
+    document.body.appendChild(vEl);
   }
+  vEl.textContent = "v" + APP_VERSION;
+}
+
+function initApp() {
+  // Local versiyonu yükle ve ekrana yazdır (APK için gömülü, PWA için o anki aktif sürüm)
+  fetch('update.json')
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.version) {
+        APP_VERSION = data.version;
+        localFetchSuccess = true;
+      }
+      renderVersionDisplay();
+    })
+    .catch(err => {
+      renderVersionDisplay(); // Hata olsa bile varsayılanı yazdır
+    });
+
+  createParticles();
+  
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const downloadBtn = document.getElementById('downloadBtn');
+  const mainMenuOverlay = document.getElementById('mainMenuOverlay');
+  const startBtn = document.getElementById('startBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
+  const menuBestDisplay = document.getElementById('menuBestDisplay');
+
+  // Load best score for menu
+  bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
+  if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
+
+  // Kaydedilmiş oyun var mı kontrol et
+  const hasSavedGame = !!localStorage.getItem('cubex_gameState');
+  if (hasSavedGame) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cubex_gameState'));
+      if (saved && saved.gameActive) gameActive = true;
+    } catch(e) {}
+  }
+  
+  updateMenuButtons();
+
+  // "Yeni Oyun" butonu — aktif oyun varsa onay sor
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
+      initAudio();
+      sfxClick();
+      if (gameActive) {
+        showConfirm('Mevcut oyun silinecek. Yeni oyun başlatmak istiyor musun?', () => {
+          mainMenuOverlay.classList.remove('active');
+          newGame();
+        });
+      } else {
+        mainMenuOverlay.classList.remove('active');
+        newGame();
+      }
+    });
+  }
+
+  // "Devam Et" butonu — kaydedilmiş oyunu yükler
+  if (resumeBtn) {
+    resumeBtn.addEventListener('click', () => {
+      initAudio();
+      sfxClick();
+      mainMenuOverlay.classList.remove('active');
+      const loaded = loadGameState();
+      if (!loaded) {
+        // Kayıt bozuksa yeni oyun başlat
+        newGame();
+      }
+    });
+  }
+
+  // iOS'da İndir butonunu gizle (APK çalışmayacağı için)
+  if (isIOS) {
+    if (downloadBtn) downloadBtn.style.display = 'none';
+  }
+
+  // Güncelleme ve Bakım kontrolünü tüm platformlar için yap
+  if (navigator.onLine) {
+    const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
+    if (isAndroid && downloadBtn) downloadBtn.style.display = 'none';
+    setTimeout(checkForUpdate, 1000); 
+  }
+
+  initIOSInstallPrompt();
+}
+
+function initIOSInstallPrompt() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  const prompt = document.getElementById('iosInstallPrompt');
+  const closeBtn = document.getElementById('closePrompt');
+
+  if (!prompt || !closeBtn) return; // Null güvenlik kontrolü
+
+  if (isIOS && !isStandalone) {
+    // Show prompt after 3 seconds
+    setTimeout(() => {
+      prompt.classList.add('show');
+    }, 3000);
+  }
+
+  closeBtn.addEventListener('click', () => {
+    prompt.classList.remove('show');
+    // Session bazlı gizle (sayfa yenilenene kadar)
+    prompt.style.display = 'none';
+  });
 }
 
 initApp();
+
+// ---- Confetti Effect ----
+function createConfetti() {
+  const container = document.body;
+  const colors = ['#4f8ef7', '#a855f7', '#ec4899', '#06b6d4', '#22c55e', '#eab308'];
+  
+  // Mobile optimization: fewer particles
+  const isMobile = window.innerWidth < 600;
+  const particleCount = isMobile ? 25 : 45;
+  
+  for (let i = 0; i < particleCount; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+    
+    const size = Math.random() * 7 + 3;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    
+    confetti.style.width = size + 'px';
+    confetti.style.height = size + 'px';
+    confetti.style.backgroundColor = color;
+    confetti.style.left = Math.random() * 100 + 'vw';
+    confetti.style.top = '-20px';
+    confetti.style.borderRadius = i % 2 === 0 ? '50%' : '2px';
+    confetti.style.position = 'fixed';
+    confetti.style.zIndex = '2000';
+    confetti.style.pointerEvents = 'none';
+    confetti.style.willChange = 'transform, opacity';
+    
+    const duration = Math.random() * 1.5 + 1.2;
+    const drift = (Math.random() - 0.5) * 150;
+    
+    if (confetti.animate) {
+      confetti.animate([
+        { transform: 'translate3d(0, 0, 0) rotate(0deg)', opacity: 1 },
+        { transform: `translate3d(${drift}px, 100vh, 0) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+      ], {
+        duration: duration * 1000,
+        easing: 'ease-out',
+        fill: 'forwards'
+      });
+    }
+    
+    container.appendChild(confetti);
+    setTimeout(() => {
+      if (confetti.parentNode) confetti.remove();
+    }, duration * 1000 + 100);
+  }
+}

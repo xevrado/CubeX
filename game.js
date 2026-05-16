@@ -3,9 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "Test Modu"; // Dosyadan okuma (file://) başarısız olursa
-let localFetchSuccess = false;
-
+let APP_VERSION = "1.1.2"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -1208,8 +1206,6 @@ function checkForUpdate() {
       const versionRegex = /^\d+\.\d+\.\d+(\.\d+)?$/;
       if (!versionRegex.test(data.version)) return;
 
-      if (!localFetchSuccess || APP_VERSION === "Test Modu") return; // Güvenlik kilidi: Sürüm doğrulanamadıysa popup gösterme
-
       if (data.version !== APP_VERSION) {
         const updatePopup = document.getElementById('updatePopup');
         const doUpdateBtn = document.getElementById('doUpdateBtn');
@@ -1283,19 +1279,7 @@ function renderVersionDisplay() {
 }
 
 function initApp() {
-  // Local versiyonu yükle ve ekrana yazdır (APK için gömülü, PWA için o anki aktif sürüm)
-  fetch('update.json')
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.version) {
-        APP_VERSION = data.version;
-        localFetchSuccess = true;
-      }
-      renderVersionDisplay();
-    })
-    .catch(err => {
-      renderVersionDisplay(); // Hata olsa bile varsayılanı yazdır
-    });
+  renderVersionDisplay();
 
   createParticles();
   

@@ -7,12 +7,23 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#0a0a1a" />
+  <meta name="theme-color" content="#020617" />
+  <meta name="description" content="CubeX - Modern blok bulmaca oyunu. Stratejik düşün, satır ve sütunları tamamla, combo yap!" />
+  <meta property="og:title" content="CubeX – Puzzle Game" />
+  <meta property="og:description" content="CubeX - Modern blok bulmaca oyunu. Stratejik düşün, combo yap!" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="icon-512.png" />
   <title>CubeX</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
-    href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap"
     rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -26,16 +37,19 @@
     <!-- Header -->
     <header class="game-header">
       <div class="header-left">
-        <button class="icon-btn" id="restartBtn" title="Yeniden Başla">↺</button>
+        <button class="icon-btn" id="homeBtn" title="Ana Menü" aria-label="Ana Menü"><i class="fas fa-house"></i></button>
+        <button class="icon-btn" id="restartBtn" title="Yeniden Başla" aria-label="Yeniden Başla"><i class="fas fa-rotate-left"></i></button>
         <span class="app-title">CubeX</span>
       </div>
       <div class="header-right">
-        <a class="download-btn" id="downloadBtn" href="https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk" download="CubeX.apk" title="APK İndir">
+        <a class="download-btn" id="downloadBtn"
+          href="https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk" download="CubeX.apk"
+          title="APK İndir" aria-label="APK İndir">
           <span class="download-btn-border"></span>
-          <span class="download-btn-content">İndir</span>
+          <span class="download-btn-content"><i class="fas fa-download"></i> İndir</span>
         </a>
-        <button class="icon-btn" id="soundBtn" title="Ses">🔊</button>
-        <button class="icon-btn" id="helpBtn" title="Yardım">❓</button>
+        <button class="icon-btn" id="soundBtn" title="Ses" aria-label="Ses Aç/Kapat"><i class="fas fa-volume-up"></i></button>
+        <button class="icon-btn" id="helpBtn" title="Yardım" aria-label="Yardım"><i class="fas fa-question-circle"></i></button>
       </div>
     </header>
 
@@ -84,10 +98,41 @@
 
   </div>
 
+  <!-- Main Menu Overlay -->
+  <div class="overlay active" id="mainMenuOverlay">
+    <div class="overlay-card menu-card">
+      <div class="menu-logo">CubeX</div>
+      <button class="overlay-btn primary-btn menu-play-btn" id="resumeBtn" style="display:none; margin-bottom: 10px;">
+        <i class="fas fa-play"></i> Devam Et
+      </button>
+      <button class="overlay-btn primary-btn menu-play-btn" id="startBtn">
+        <i class="fas fa-gamepad"></i> Yeni Oyun — <span class="menu-best-text">[En İyi: <span id="menuBestDisplay">0</span>
+          p.]</span>
+      </button>
+
+      <div class="menu-footer">
+        <div class="social-links">
+          <a href="https://instagram.com/xevra.do" target="_blank" class="social-item" title="Instagram">
+            <i class="fab fa-instagram"></i>
+          </a>
+          <a href="https://whatsapp.com/channel/0029VbCA2duAojYp70uZ5R2e" target="_blank" class="social-item"
+            title="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+          </a>
+          <a href="https://discord.gg/w49pgU2B8" target="_blank" class="social-item" title="Discord">
+            <i class="fab fa-discord"></i>
+          </a>
+        </div>
+        <div class="contact-info">İletişim: xevrado@gmail.com</div>
+        <div class="copyright">© 2026 CubeX</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Game Over Overlay -->
   <div class="overlay" id="gameOverOverlay">
     <div class="overlay-card game-over-card">
-      <div class="overlay-emoji">😵</div>
+      <div class="overlay-emoji"><i class="fas fa-skull-crossbones"></i></div>
       <h2 class="overlay-title">Oyun Bitti!</h2>
       <p class="overlay-sub">Yerleştirecek yer kalmadı</p>
       <div class="result-grid">
@@ -104,14 +149,17 @@
           <span class="result-value" id="finalLevel">1</span>
         </div>
       </div>
-      <button class="overlay-btn primary-btn" id="playAgainBtn">🎮 Tekrar Oyna</button>
+      <button class="overlay-btn primary-btn" id="playAgainBtn"><i class="fas fa-play"></i> Tekrar Oyna</button>
+      <button class="overlay-btn secondary-btn" id="backToMenuBtn"
+        style="margin-top: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);"><i
+          class="fas fa-house"></i> Ana Menü</button>
     </div>
   </div>
 
   <!-- Help Overlay -->
   <div class="overlay" id="helpOverlay">
     <div class="overlay-card help-card">
-      <div class="overlay-emoji">📖</div>
+      <div class="overlay-emoji"><i class="fas fa-book-open"></i></div>
       <h2 class="overlay-title">Nasıl Oynanır?</h2>
       <div class="help-steps">
         <div class="help-step">
@@ -131,7 +179,24 @@
           <span>Hiçbir parça sığmazsa oyun biter!</span>
         </div>
       </div>
-      <button class="overlay-btn primary-btn" id="closeHelpBtn">Anladım! 👍</button>
+      <button class="overlay-btn primary-btn" id="closeHelpBtn">Anladım! <i class="fas fa-check"></i></button>
+    </div>
+  </div>
+
+  <!-- Custom Confirm Dialog -->
+  <div class="overlay" id="confirmOverlay">
+    <div class="overlay-card" style="max-width: 340px; text-align: center;">
+      <div class="overlay-emoji"><i class="fas fa-exclamation-triangle" style="color: #eab308;"></i></div>
+      <h2 class="overlay-title" id="confirmTitle">Emin misin?</h2>
+      <p class="overlay-sub" id="confirmMessage">Mevcut oyun silinecek.</p>
+      <div style="display: flex; gap: 12px; margin-top: 18px;">
+        <button class="overlay-btn secondary-btn" id="confirmNo" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+          <i class="fas fa-times"></i> Hayır
+        </button>
+        <button class="overlay-btn primary-btn" id="confirmYes" style="flex:1;">
+          <i class="fas fa-check"></i> Evet
+        </button>
+      </div>
     </div>
   </div>
 
@@ -146,7 +211,52 @@
     <button class="update-btn" id="doUpdateBtn">Güncelle</button>
   </div>
 
+  <!-- PWA iOS Install Prompt -->
+  <div class="ios-install-prompt" id="iosInstallPrompt">
+    <div class="prompt-content">
+      <div class="prompt-header">
+        <img src="icon-192.png" alt="CubeX" class="prompt-icon">
+        <div class="prompt-text">
+          <span class="prompt-title">CubeX'i Yükle</span>
+          <span class="prompt-desc">Tam ekran deneyimi için ana ekrana ekle</span>
+        </div>
+        <button class="close-prompt" id="closePrompt">×</button>
+      </div>
+      <div class="prompt-body">
+        <div class="step">
+          <span class="step-icon"><i class="fas fa-share-square"></i></span>
+          <span>Aşağıdaki <strong>Paylaş</strong> butonuna dokun</span>
+        </div>
+        <div class="step">
+          <span class="step-icon"><i class="fas fa-plus-square"></i></span>
+          <span><strong>Ana Ekrana Ekle</strong> seçeneğini seç</span>
+        </div>
+      </div>
+    </div>
+    <div class="prompt-arrow"></div>
+  </div>
+
   <script src="game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Yeni güncelleme yüklendi. Eğer kullanıcı ana menüdeyse otomatik yenile.
+                const menuActive = document.getElementById('mainMenuOverlay').classList.contains('active');
+                if (menuActive) {
+                  window.location.reload();
+                }
+              }
+            });
+          });
+        });
+      });
+    }
+  </script>
 </body>
 
 </html>
