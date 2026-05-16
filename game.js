@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.1.1"; // Dosyadan okuma (file://) başarısız olursa kullanılacak varsayılan
+let APP_VERSION = "Test Modu"; // Dosyadan okuma (file://) başarısız olursa
 let localFetchSuccess = false;
 
 // ---- Constants ----
@@ -1205,10 +1205,10 @@ function checkForUpdate() {
       if (!isAndroid || typeof data.version !== 'string') return;
       
       // Sürüm numarası doğrulama (örn. 1.1.0 veya 1.1.1 formatında olmalı)
-      const versionRegex = /^\\d+\\.\\d+\\.\\d+$/;
+      const versionRegex = /^\d+\.\d+\.\d+$/;
       if (!versionRegex.test(data.version)) return;
 
-      if (!localFetchSuccess) return; // Güvenlik kilidi: Yerel sürüm okunamadıysa güncelleme sorma
+      if (!localFetchSuccess || APP_VERSION === "Test Modu") return; // Güvenlik kilidi: Sürüm doğrulanamadıysa popup gösterme
 
       if (data.version !== APP_VERSION) {
         const updatePopup = document.getElementById('updatePopup');
