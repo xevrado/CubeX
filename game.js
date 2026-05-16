@@ -1096,8 +1096,8 @@ function showConfirm(message, onYes, onNo) {
 
 // ---- Update Logic ----
 function checkForUpdate() {
+  if (!navigator.onLine) return;
   const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
-  if (!isAndroid || !navigator.onLine) return;
   
   // JSON tabanlı daha güvenli güncelleme sistemi
   fetch('https://raw.githubusercontent.com/xevrado/CubeX/main/update.json?t=' + Date.now())
@@ -1106,8 +1106,53 @@ function checkForUpdate() {
       return res.json();
     })
     .then(data => {
-      // JSON formatında değilse veya version eksikse (yanlış kod girilmişse) güncellemeyi atla
-      if (!data || typeof data.version !== 'string') return;
+      if (!data) return;
+
+      // 1. Bakım Molası Kontrolü (Tüm Platformlar)
+      if (data.maintenance === true) {
+        let overlay = document.getElementById('maintenanceOverlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'maintenanceOverlay';
+          overlay.className = 'overlay active';
+          overlay.style.zIndex = '99999';
+          overlay.style.flexDirection = 'column';
+          overlay.style.justifyContent = 'center';
+          overlay.style.alignItems = 'center';
+          overlay.style.background = 'rgba(15, 23, 42, 0.98)';
+          
+          const icon = document.createElement('i');
+          icon.className = 'fas fa-tools';
+          icon.style.fontSize = '4rem';
+          icon.style.color = '#eab308';
+          icon.style.marginBottom = '20px';
+          
+          const title = document.createElement('h2');
+          title.textContent = 'Bakım Molası';
+          title.style.color = 'white';
+          title.style.marginBottom = '15px';
+          title.style.fontFamily = "'SF Pro Display', sans-serif";
+          
+          const msg = document.createElement('p');
+          msg.textContent = data.maintenanceMessage || 'Sunucularımızda bakım çalışması yapılmaktadır. Lütfen daha sonra tekrar deneyiniz.';
+          msg.style.color = '#cbd5e1';
+          msg.style.textAlign = 'center';
+          msg.style.maxWidth = '80%';
+          msg.style.lineHeight = '1.6';
+          msg.style.fontFamily = "'Inter', sans-serif";
+          
+          overlay.appendChild(icon);
+          overlay.appendChild(title);
+          overlay.appendChild(msg);
+          document.body.appendChild(overlay);
+        } else {
+          overlay.classList.add('active');
+        }
+        return; // Bakım varsa Android güncelleme uyarısını gösterme
+      }
+
+      // 2. Android APK Güncelleme Kontrolü
+      if (!isAndroid || typeof data.version !== 'string') return;
       
       // Sürüm numarası doğrulama (örn. 1.1.0 veya 1.1.1 formatında olmalı)
       const versionRegex = /^\\d+\\.\\d+\\.\\d+$/;
@@ -1141,7 +1186,7 @@ function checkForUpdate() {
       }
     })
     .catch(err => {
-      // JSON parse hatası veya ağ hatası durumunda sessizce geç (hatalı kod koruması)
+      // JSON parse hatası veya ağ hatası durumunda sessizce geç
       console.warn("Update check safely ignored:", err.message);
     });
 }
@@ -1228,11 +1273,11 @@ function initApp() {
     if (downloadBtn) downloadBtn.style.display = 'none';
   }
 
-  // Android Uygulaması (Capacitor) içindeysek Güncelleme kontrolü yap
-  const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
-  if (isAndroid && navigator.onLine) {
-    if (downloadBtn) downloadBtn.style.display = 'none';
-    setTimeout(checkForUpdate, 2000); 
+  // Güncelleme ve Bakım kontrolünü tüm platformlar için yap
+  if (navigator.onLine) {
+    const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
+    if (isAndroid && downloadBtn) downloadBtn.style.display = 'none';
+    setTimeout(checkForUpdate, 1000); 
   }
 
   initIOSInstallPrompt();
