@@ -1204,8 +1204,8 @@ function checkForUpdate() {
       // 2. Android APK Güncelleme Kontrolü
       if (!isAndroid || typeof data.version !== 'string') return;
       
-      // Sürüm numarası doğrulama (örn. 1.1.0 veya 1.1.1 formatında olmalı)
-      const versionRegex = /^\d+\.\d+\.\d+$/;
+      // Sürüm numarası doğrulama (örn. 1.1.0, 1.1.1 veya 1.1.1.1 formatında olmalı)
+      const versionRegex = /^\d+\.\d+\.\d+(\.\d+)?$/;
       if (!versionRegex.test(data.version)) return;
 
       if (!localFetchSuccess || APP_VERSION === "Test Modu") return; // Güvenlik kilidi: Sürüm doğrulanamadıysa popup gösterme
