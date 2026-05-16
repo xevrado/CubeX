@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-const APP_VERSION = "1.1.1"; // Bu her APK yayınında güncellenmelidir
+let APP_VERSION = "1.0.0"; // Bu değer artık otomatik olarak update.json'dan çekiliyor
 
 // ---- Constants ----
 const BOARD_SIZE = 8;
@@ -1261,7 +1261,38 @@ function updateMenuButtons() {
 }
 
 // ---- Init ----
+function renderVersionDisplay() {
+  let vEl = document.getElementById('versionDisplay');
+  if (!vEl) {
+    vEl = document.createElement('div');
+    vEl.id = 'versionDisplay';
+    vEl.style.position = 'fixed';
+    vEl.style.bottom = '8px';
+    vEl.style.right = '8px';
+    vEl.style.color = 'rgba(255, 255, 255, 0.4)';
+    vEl.style.fontSize = '12px';
+    vEl.style.fontFamily = "'Inter', sans-serif";
+    vEl.style.pointerEvents = 'none';
+    vEl.style.zIndex = '99999';
+    document.body.appendChild(vEl);
+  }
+  vEl.textContent = "v" + APP_VERSION;
+}
+
 function initApp() {
+  // Local versiyonu yükle ve ekrana yazdır (APK için gömülü, PWA için o anki aktif sürüm)
+  fetch('update.json')
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.version) {
+        APP_VERSION = data.version;
+      }
+      renderVersionDisplay();
+    })
+    .catch(err => {
+      renderVersionDisplay(); // Hata olsa bile varsayılanı yazdır
+    });
+
   createParticles();
   
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
