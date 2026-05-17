@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.3.3.1"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.3.4.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -1125,151 +1125,7 @@ function showConfirm(message, onYes, onNo) {
   };
 }
 
-// ---- Update Logic ----
-function checkForUpdate() {
-  if (!navigator.onLine) return;
-  const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
-  
-  // JSON tabanlı daha güvenli güncelleme sistemi
-  fetch('https://raw.githubusercontent.com/xevrado/CubeX/main/update.json?t=' + Date.now())
-    .then(res => {
-      if (!res.ok) throw new Error("Ağ hatası");
-      return res.json();
-    })
-    .then(data => {
-      if (!data) return;
 
-      // 1. Bakım Molası Kontrolü (Tüm Platformlar)
-      if (data.maintenance === true) {
-        let overlay = document.getElementById('maintenanceOverlay');
-        if (!overlay) {
-          overlay = document.createElement('div');
-          overlay.id = 'maintenanceOverlay';
-          overlay.className = 'overlay active';
-          overlay.style.zIndex = '99999';
-          overlay.style.flexDirection = 'column';
-          overlay.style.justifyContent = 'center';
-          overlay.style.alignItems = 'center';
-          overlay.style.background = 'rgba(15, 23, 42, 0.98)';
-          
-          const icon = document.createElement('i');
-          icon.className = 'fas fa-tools';
-          icon.style.fontSize = '4rem';
-          icon.style.color = '#eab308';
-          icon.style.marginBottom = '20px';
-          
-          const title = document.createElement('h2');
-          title.textContent = 'Bakım Molası';
-          title.style.color = 'white';
-          title.style.marginBottom = '15px';
-          title.style.fontFamily = "'SF Pro Display', sans-serif";
-          
-          const msg = document.createElement('p');
-          msg.id = 'maintenanceMsgText';
-          msg.style.color = '#cbd5e1';
-          msg.style.textAlign = 'center';
-          msg.style.maxWidth = '80%';
-          msg.style.lineHeight = '1.6';
-          msg.style.fontFamily = "'Inter', sans-serif";
-          
-          const timeBadge = document.createElement('div');
-          timeBadge.id = 'maintenanceTimeBadge';
-          timeBadge.style.marginTop = '25px';
-          timeBadge.style.padding = '10px 20px';
-          timeBadge.style.background = 'rgba(234, 179, 8, 0.15)';
-          timeBadge.style.border = '1px solid rgba(234, 179, 8, 0.3)';
-          timeBadge.style.borderRadius = '12px';
-          timeBadge.style.color = '#eab308';
-          timeBadge.style.fontFamily = "'Inter', sans-serif";
-          timeBadge.style.fontSize = '15px';
-          timeBadge.style.fontWeight = '600';
-          timeBadge.style.display = 'none';
-          timeBadge.style.alignItems = 'center';
-          timeBadge.style.gap = '10px';
-          
-          const clockIcon = document.createElement('i');
-          clockIcon.className = 'far fa-clock';
-          timeBadge.appendChild(clockIcon);
-          
-          const timeText = document.createElement('span');
-          timeText.id = 'maintenanceTimeText';
-          timeBadge.appendChild(timeText);
-          
-          overlay.appendChild(icon);
-          overlay.appendChild(title);
-          overlay.appendChild(msg);
-          overlay.appendChild(timeBadge);
-          
-          document.body.appendChild(overlay);
-        }
-        
-        // Mevcut overlay'i güncelle ve göster
-        overlay.classList.add('active');
-        
-        const msgEl = document.getElementById('maintenanceMsgText');
-        if (msgEl) {
-          msgEl.textContent = data.maintenanceMessage || 'Sunucularımızda bakım çalışması yapılmaktadır. Lütfen daha sonra tekrar deneyiniz.';
-        }
-        
-        const badgeEl = document.getElementById('maintenanceTimeBadge');
-        const timeEl = document.getElementById('maintenanceTimeText');
-        if (badgeEl && timeEl) {
-          if (data.maintenanceEndTime) {
-            badgeEl.style.display = 'flex';
-            timeEl.textContent = data.maintenanceEndTime;
-          } else {
-            badgeEl.style.display = 'none';
-          }
-        }
-        
-        return; // Bakım varsa Android güncelleme uyarısını gösterme
-      } else {
-        const overlay = document.getElementById('maintenanceOverlay');
-        if (overlay) {
-          overlay.classList.remove('active');
-          overlay.style.display = 'none';
-        }
-      }
-
-      // 2. Android APK Güncelleme Kontrolü
-      if (!isAndroid || typeof data.version !== 'string') return;
-      
-      // Sürüm numarası doğrulama (örn. 1.1.0, 1.1.1 veya 1.1.1.1 formatında olmalı)
-      const versionRegex = /^\d+\.\d+\.\d+(\.\d+)?$/;
-      if (!versionRegex.test(data.version)) return;
-
-      if (data.version !== APP_VERSION) {
-        const updatePopup = document.getElementById('updatePopup');
-        const doUpdateBtn = document.getElementById('doUpdateBtn');
-        const closeUpdateBtn = document.getElementById('closeUpdateBtn');
-        
-        if (updatePopup && doUpdateBtn) {
-          updatePopup.style.display = 'block';
-          
-          // onclick kullanarak listener birikimini önle
-          doUpdateBtn.onclick = async () => {
-            const apkUrl = data.downloadUrl || 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk';
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
-              await window.Capacitor.Plugins.Browser.open({ url: apkUrl });
-            } else {
-              window.location.href = apkUrl;
-            }
-          };
-
-          // Kapatma butonu bağlantısı
-          if (closeUpdateBtn) {
-            closeUpdateBtn.onclick = () => {
-              updatePopup.style.display = 'none';
-            };
-          }
-        }
-      }
-    })
-    .catch(err => {
-      // JSON parse hatası veya ağ hatası durumunda sessizce geç
-      console.warn("Update check safely ignored:", err.message);
-    });
-}
 
 // ---- Menu Button Helpers ----
 function updateMenuButtons() {
@@ -1377,7 +1233,6 @@ function initApp() {
   if (navigator.onLine) {
     const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
     if (isAndroid && downloadBtn) downloadBtn.style.display = 'none';
-    setTimeout(checkForUpdate, 1000); 
   }
 
   initIOSInstallPrompt();

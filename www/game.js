@@ -3,9 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "Test Modu"; // Dosyadan okuma (file://) başarısız olursa
-let localFetchSuccess = false;
-
+let APP_VERSION = "1.3.4.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -579,7 +577,7 @@ function addScore(pts) {
   levelEl.textContent = level;
 
   // Best
-  if (score > bestScore) {
+  if ((typeof cheatUsedInThisGame === 'undefined' || !cheatUsedInThisGame) && score > bestScore) {
     bestScore = score;
     bestEl.textContent = bestScore;
     localStorage.setItem('cubex_best', bestScore);
@@ -909,12 +907,44 @@ function gameOver() {
   finalScoreEl.textContent = score;
   finalBestEl.textContent = bestScore;
   finalLevelEl.textContent = level;
-  gameOverOverlay.classList.add('active');
-  clearGameState(); // Oyun bitti, kaydı temizle
+  
+  const subEl = gameOverOverlay.querySelector('.overlay-sub');
+  if (typeof cheatUsedInThisGame !== 'undefined' && cheatUsedInThisGame) {
+    if (subEl) subEl.textContent = "Hile kullanıldı, puan kaydedilmedi";
+    gameOverOverlay.classList.add('active');
+    clearGameState(); // Oyun bitti, kaydı temizle
+  } else {
+    if (subEl) subEl.textContent = "Yerleştirecek yer kalmadı";
+    clearGameState();
+    
+    // Eğer sıfırdan büyük bir skor varsa, leaderboard'a gönderilmeyi denesin
+    const lastSubmitted = parseInt(localStorage.getItem('cubex_lastSubmitted') || '0');
+    if (score > 0 && score > lastSubmitted) {
+      let pName = localStorage.getItem('cubex_playerName');
+      if (!pName) {
+        // İsim yoksa sor
+        document.getElementById('nameOverlay').classList.add('active');
+        // Oyuncuya skoru hatırlat
+        const nameOverlaySub = document.querySelector('#nameOverlay .overlay-sub');
+        if (nameOverlaySub) nameOverlaySub.textContent = `Skorun: ${score} - Liderlik tablosu için ismini gir`;
+      } else {
+        // İsim varsa direkt gönder
+        submitScore(pName, score);
+        gameOverOverlay.classList.add('active');
+      }
+    } else {
+      gameOverOverlay.classList.add('active');
+    }
+  }
 }
 
 // ---- New Game ----
 function newGame() {
+  if (typeof cheatUsedInThisGame !== 'undefined') cheatUsedInThisGame = false;
+  if (typeof cheatMode !== 'undefined') cheatMode = false;
+  const cheatIcon = document.getElementById('cheatActiveIcon');
+  if (cheatIcon) cheatIcon.style.display = 'none';
+
   score = 0;
   level = 1;
   combo = 0;
@@ -1095,153 +1125,7 @@ function showConfirm(message, onYes, onNo) {
   };
 }
 
-// ---- Update Logic ----
-function checkForUpdate() {
-  if (!navigator.onLine) return;
-  const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
-  
-  // JSON tabanlı daha güvenli güncelleme sistemi
-  fetch('https://raw.githubusercontent.com/xevrado/CubeX/main/update.json?t=' + Date.now())
-    .then(res => {
-      if (!res.ok) throw new Error("Ağ hatası");
-      return res.json();
-    })
-    .then(data => {
-      if (!data) return;
 
-      // 1. Bakım Molası Kontrolü (Tüm Platformlar)
-      if (data.maintenance === true) {
-        let overlay = document.getElementById('maintenanceOverlay');
-        if (!overlay) {
-          overlay = document.createElement('div');
-          overlay.id = 'maintenanceOverlay';
-          overlay.className = 'overlay active';
-          overlay.style.zIndex = '99999';
-          overlay.style.flexDirection = 'column';
-          overlay.style.justifyContent = 'center';
-          overlay.style.alignItems = 'center';
-          overlay.style.background = 'rgba(15, 23, 42, 0.98)';
-          
-          const icon = document.createElement('i');
-          icon.className = 'fas fa-tools';
-          icon.style.fontSize = '4rem';
-          icon.style.color = '#eab308';
-          icon.style.marginBottom = '20px';
-          
-          const title = document.createElement('h2');
-          title.textContent = 'Bakım Molası';
-          title.style.color = 'white';
-          title.style.marginBottom = '15px';
-          title.style.fontFamily = "'SF Pro Display', sans-serif";
-          
-          const msg = document.createElement('p');
-          msg.id = 'maintenanceMsgText';
-          msg.style.color = '#cbd5e1';
-          msg.style.textAlign = 'center';
-          msg.style.maxWidth = '80%';
-          msg.style.lineHeight = '1.6';
-          msg.style.fontFamily = "'Inter', sans-serif";
-          
-          const timeBadge = document.createElement('div');
-          timeBadge.id = 'maintenanceTimeBadge';
-          timeBadge.style.marginTop = '25px';
-          timeBadge.style.padding = '10px 20px';
-          timeBadge.style.background = 'rgba(234, 179, 8, 0.15)';
-          timeBadge.style.border = '1px solid rgba(234, 179, 8, 0.3)';
-          timeBadge.style.borderRadius = '12px';
-          timeBadge.style.color = '#eab308';
-          timeBadge.style.fontFamily = "'Inter', sans-serif";
-          timeBadge.style.fontSize = '15px';
-          timeBadge.style.fontWeight = '600';
-          timeBadge.style.display = 'none';
-          timeBadge.style.alignItems = 'center';
-          timeBadge.style.gap = '10px';
-          
-          const clockIcon = document.createElement('i');
-          clockIcon.className = 'far fa-clock';
-          timeBadge.appendChild(clockIcon);
-          
-          const timeText = document.createElement('span');
-          timeText.id = 'maintenanceTimeText';
-          timeBadge.appendChild(timeText);
-          
-          overlay.appendChild(icon);
-          overlay.appendChild(title);
-          overlay.appendChild(msg);
-          overlay.appendChild(timeBadge);
-          
-          document.body.appendChild(overlay);
-        }
-        
-        // Mevcut overlay'i güncelle ve göster
-        overlay.classList.add('active');
-        
-        const msgEl = document.getElementById('maintenanceMsgText');
-        if (msgEl) {
-          msgEl.textContent = data.maintenanceMessage || 'Sunucularımızda bakım çalışması yapılmaktadır. Lütfen daha sonra tekrar deneyiniz.';
-        }
-        
-        const badgeEl = document.getElementById('maintenanceTimeBadge');
-        const timeEl = document.getElementById('maintenanceTimeText');
-        if (badgeEl && timeEl) {
-          if (data.maintenanceEndTime) {
-            badgeEl.style.display = 'flex';
-            timeEl.textContent = data.maintenanceEndTime;
-          } else {
-            badgeEl.style.display = 'none';
-          }
-        }
-        
-        return; // Bakım varsa Android güncelleme uyarısını gösterme
-      } else {
-        const overlay = document.getElementById('maintenanceOverlay');
-        if (overlay) {
-          overlay.classList.remove('active');
-          overlay.style.display = 'none';
-        }
-      }
-
-      // 2. Android APK Güncelleme Kontrolü
-      if (!isAndroid || typeof data.version !== 'string') return;
-      
-      // Sürüm numarası doğrulama (örn. 1.1.0, 1.1.1 veya 1.1.1.1 formatında olmalı)
-      const versionRegex = /^\d+\.\d+\.\d+(\.\d+)?$/;
-      if (!versionRegex.test(data.version)) return;
-
-      if (!localFetchSuccess || APP_VERSION === "Test Modu") return; // Güvenlik kilidi: Sürüm doğrulanamadıysa popup gösterme
-
-      if (data.version !== APP_VERSION) {
-        const updatePopup = document.getElementById('updatePopup');
-        const doUpdateBtn = document.getElementById('doUpdateBtn');
-        const closeUpdateBtn = document.getElementById('closeUpdateBtn');
-        
-        if (updatePopup && doUpdateBtn) {
-          updatePopup.style.display = 'block';
-          
-          // onclick kullanarak listener birikimini önle
-          doUpdateBtn.onclick = async () => {
-            const apkUrl = data.downloadUrl || 'https://github.com/xevrado/CubeX/releases/download/latest/app-debug.apk';
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
-              await window.Capacitor.Plugins.Browser.open({ url: apkUrl });
-            } else {
-              window.location.href = apkUrl;
-            }
-          };
-
-          // Kapatma butonu bağlantısı
-          if (closeUpdateBtn) {
-            closeUpdateBtn.onclick = () => {
-              updatePopup.style.display = 'none';
-            };
-          }
-        }
-      }
-    })
-    .catch(err => {
-      // JSON parse hatası veya ağ hatası durumunda sessizce geç
-      console.warn("Update check safely ignored:", err.message);
-    });
-}
 
 // ---- Menu Button Helpers ----
 function updateMenuButtons() {
@@ -1283,19 +1167,7 @@ function renderVersionDisplay() {
 }
 
 function initApp() {
-  // Local versiyonu yükle ve ekrana yazdır (APK için gömülü, PWA için o anki aktif sürüm)
-  fetch('update.json')
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.version) {
-        APP_VERSION = data.version;
-        localFetchSuccess = true;
-      }
-      renderVersionDisplay();
-    })
-    .catch(err => {
-      renderVersionDisplay(); // Hata olsa bile varsayılanı yazdır
-    });
+  renderVersionDisplay();
 
   createParticles();
   
@@ -1361,7 +1233,6 @@ function initApp() {
   if (navigator.onLine) {
     const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
     if (isAndroid && downloadBtn) downloadBtn.style.display = 'none';
-    setTimeout(checkForUpdate, 1000); 
   }
 
   initIOSInstallPrompt();
@@ -1390,6 +1261,24 @@ function initIOSInstallPrompt() {
 }
 
 initApp();
+
+// ---- Offline to Online Score Sync ----
+function syncPendingScore() {
+  if (!navigator.onLine) return;
+  const best = parseInt(localStorage.getItem('cubex_best') || '0');
+  const lastSub = parseInt(localStorage.getItem('cubex_lastSubmitted') || '0');
+  const pName = localStorage.getItem('cubex_playerName');
+  
+  // Eğer oyuncunun bir ismi varsa ve son kaydedilen skordan daha yüksek bir yerel "best" skoru varsa yolla
+  if (best > 0 && best > lastSub && pName) {
+    console.log("Çevrimdışı yapılan rekor çevrimiçi olundu, eşitleniyor:", best);
+    submitScore(pName, best);
+  }
+}
+
+window.addEventListener('online', syncPendingScore);
+// Uygulama açılışında da bir kez kontrol et
+setTimeout(syncPendingScore, 2000);
 
 // ---- Confetti Effect ----
 function createConfetti() {
@@ -1438,3 +1327,347 @@ function createConfetti() {
     }, duration * 1000 + 100);
   }
 }
+
+// ---- Leaderboard Logic ----
+const showLeaderboardBtn = document.getElementById('showLeaderboardBtn');
+const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
+const leaderboardOverlay = document.getElementById('leaderboardOverlay');
+const leaderboardList = document.getElementById('leaderboardList');
+
+if (showLeaderboardBtn) {
+  showLeaderboardBtn.addEventListener('click', () => {
+    sfxClick();
+    if (leaderboardOverlay) leaderboardOverlay.classList.add('active');
+    loadLeaderboard();
+  });
+}
+
+if (closeLeaderboardBtn) {
+  closeLeaderboardBtn.addEventListener('click', () => {
+    sfxClick();
+    if (leaderboardOverlay) leaderboardOverlay.classList.remove('active');
+  });
+}
+
+const SUPABASE_URL = "https://wrdlbqhlszqskhbignot.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyZGxicWhsc3pxc2toYmlnbm90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMjkxMzEsImV4cCI6MjA5NDYwNTEzMX0.WcTwqQVH3hkHyIpNwwXxY9oKcdcF0eW6fcChvSAZKq4";
+
+// ---- Name Overlay Logic ----
+const saveNameBtn = document.getElementById('saveNameBtn');
+const skipNameBtn = document.getElementById('skipNameBtn');
+const playerNameInput = document.getElementById('playerNameInput');
+const nameOverlay = document.getElementById('nameOverlay');
+
+if (saveNameBtn && skipNameBtn && playerNameInput) {
+  saveNameBtn.addEventListener('click', () => {
+    sfxClick();
+    const pName = playerNameInput.value.trim().substring(0, 12);
+    if (pName.length > 0) {
+      localStorage.setItem('cubex_playerName', pName);
+      nameOverlay.classList.remove('active');
+      submitScore(pName, score);
+      gameOverOverlay.classList.add('active');
+    } else {
+      alert("Lütfen geçerli bir isim girin.");
+    }
+  });
+
+  skipNameBtn.addEventListener('click', () => {
+    sfxClick();
+    nameOverlay.classList.remove('active');
+    gameOverOverlay.classList.add('active');
+  });
+}
+
+async function submitScore(pName, finalScore) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ name: pName, score: finalScore })
+    });
+    
+    if (res.ok) {
+      localStorage.setItem('cubex_lastSubmitted', finalScore);
+      console.log("Skor Supabase'e başarıyla kaydedildi.");
+      return true;
+    } else {
+      const errText = await res.text();
+      console.error("Supabase Hatası:", errText);
+      alert("Veritabanı Hatası: " + errText);
+      return false;
+    }
+  } catch(e) {
+    console.error("Skor yüklenemedi", e);
+    alert("Bağlantı hatası: " + e.message);
+    return false;
+  }
+}
+
+async function loadLeaderboard() {
+  if (!leaderboardList) return;
+  
+  leaderboardList.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
+  
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=25`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    
+    if (!res.ok) throw new Error("API Hatası");
+    const data = await res.json();
+    
+    leaderboardList.innerHTML = '';
+    
+    if (data.length === 0) {
+      leaderboardList.innerHTML = '<div class="leaderboard-loading">Henüz hiç skor yok! İlk sen ol!</div>';
+      return;
+    }
+    
+    data.forEach((itemData, index) => {
+      const rank = index + 1;
+      let rankClass = '';
+      if (rank === 1) rankClass = 'top-1';
+      else if (rank === 2) rankClass = 'top-2';
+      else if (rank === 3) rankClass = 'top-3';
+      
+      const item = document.createElement('div');
+      item.className = `lb-item ${rankClass}`;
+      item.innerHTML = `
+        <span class="lb-rank">${rank}</span>
+        <span class="lb-name">${itemData.name}</span>
+        <span class="lb-score">${itemData.score}</span>
+      `;
+      leaderboardList.appendChild(item);
+    });
+    
+  } catch(e) {
+    console.error(e);
+    leaderboardList.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
+  }
+}
+
+// ---- Cheat Mode Logic ----
+let cheatStage = 0;
+let trCount = 0;
+let blCount = 0;
+let cheatTimer = null;
+let cheatMode = false;
+let cheatUsedInThisGame = false;
+
+function handleCheatTap(clientX, clientY) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  
+  // Right Top Corner (80x80px)
+  const isTopRight = clientX > w - 80 && clientY < 80;
+  // Left Bottom Corner (80x80px)
+  const isBottomLeft = clientX < 80 && clientY > h - 80;
+
+  if (cheatStage === 0 && isTopRight) {
+    trCount++;
+    if (trCount === 7) {
+      cheatStage = 1;
+      cheatTimer = setTimeout(() => {
+        cheatStage = 0;
+        trCount = 0;
+        blCount = 0;
+      }, 7000);
+    }
+  } else if (cheatStage === 1 && isBottomLeft) {
+    blCount++;
+    if (blCount === 7) {
+      clearTimeout(cheatTimer);
+      cheatStage = 0;
+      trCount = 0;
+      blCount = 0;
+      showCheatDialog();
+    }
+  }
+}
+
+document.addEventListener('touchstart', (e) => {
+  if(e.touches.length > 0) {
+    handleCheatTap(e.touches[0].clientX, e.touches[0].clientY);
+  }
+});
+document.addEventListener('mousedown', (e) => {
+  handleCheatTap(e.clientX, e.clientY);
+});
+
+function showCheatDialog() {
+  const overlay = document.getElementById('cheatOverlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+const cheatSubmit = document.getElementById('cheatSubmit');
+const cheatCancel = document.getElementById('cheatCancel');
+const cheatInput = document.getElementById('cheatInput');
+
+if (cheatSubmit && cheatCancel && cheatInput) {
+  cheatCancel.addEventListener('click', () => {
+    document.getElementById('cheatOverlay').classList.remove('active');
+    cheatInput.value = '';
+    sfxClick();
+  });
+  cheatSubmit.addEventListener('click', () => {
+    sfxClick();
+    const code = cheatInput.value.trim();
+    if (code.toLowerCase() === 'hilex') {
+      cheatMode = true;
+      cheatUsedInThisGame = true;
+      document.getElementById('cheatOverlay').classList.remove('active');
+      cheatInput.value = '';
+      
+      const cheatIcon = document.getElementById('cheatActiveIcon');
+      if (cheatIcon) cheatIcon.style.setProperty('display', 'flex', 'important');
+      
+      // Hile Aktif: Tahtaya tıklayınca blokları silme özelliği
+      alert("Geliştirici Modu Aktif!\nArtık tahtadaki herhangi bir bloğa tıklayarak onu yok edebilirsin!");
+      
+    } else if (code === 'XeV!r@d0_') {
+      document.getElementById('cheatOverlay').classList.remove('active');
+      cheatInput.value = '';
+      const adminOverlay = document.getElementById('adminOverlay');
+      if (adminOverlay) adminOverlay.classList.add('active');
+    } else {
+      alert("Hatalı kod.");
+    }
+  });
+}
+
+// ---- Admin Mode Logic ----
+const adminCloseBtn = document.getElementById('adminCloseBtn');
+const adminAddScoreBtn = document.getElementById('adminAddScoreBtn');
+const adminDeleteScoreBtn = document.getElementById('adminDeleteScoreBtn');
+
+if (adminCloseBtn) {
+  adminCloseBtn.addEventListener('click', () => {
+    sfxClick();
+    document.getElementById('adminOverlay').classList.remove('active');
+  });
+}
+
+if (adminAddScoreBtn) {
+  adminAddScoreBtn.addEventListener('click', async () => {
+    sfxClick();
+    const nameInput = document.getElementById('adminScoreName').value.trim();
+    const valInput = parseInt(document.getElementById('adminScoreValue').value);
+    
+    if (!nameInput || isNaN(valInput)) {
+      alert("Lütfen geçerli bir isim ve puan girin.");
+      return;
+    }
+    
+    adminAddScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+    const success = await submitScore(nameInput, valInput);
+    adminAddScoreBtn.innerHTML = '<i class="fas fa-upload"></i> Skoru Yükle';
+    if (success) {
+      alert(`${nameInput} adlı oyuncuya ${valInput} puan eklendi/güncellendi.`);
+    }
+  });
+}
+
+if (adminDeleteScoreBtn) {
+  adminDeleteScoreBtn.addEventListener('click', async () => {
+    sfxClick();
+    const nameInput = document.getElementById('adminDeleteName').value.trim();
+    
+    if (!nameInput) {
+      alert("Silinecek ismi yazmalısın.");
+      return;
+    }
+    
+    if (confirm(`"${nameInput}" isimli oyuncunun skorunu kalıcı olarak silmek istediğine emin misin?`)) {
+      adminDeleteScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Siliniyor...';
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${nameInput}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        if (res.ok) {
+          alert(`Silme başarılı.`);
+          document.getElementById('adminDeleteName').value = '';
+        } else {
+          alert("Silinirken bir hata oluştu.");
+        }
+      } catch(e) {
+        alert("Ağ hatası.");
+      }
+      adminDeleteScoreBtn.innerHTML = '<i class="fas fa-trash"></i> Skoru Veritabanından Sil';
+    }
+  });
+}
+
+// Cheat Disable / Icon Logic
+const cheatActiveIcon = document.getElementById('cheatActiveIcon');
+const cheatInfoOverlay = document.getElementById('cheatInfoOverlay');
+const cheatRestartBtn = document.getElementById('cheatRestartBtn');
+const cheatInfoCloseBtn = document.getElementById('cheatInfoCloseBtn');
+
+if (cheatActiveIcon) {
+  cheatActiveIcon.addEventListener('click', () => {
+    sfxClick();
+    cheatMode = false;
+    cheatActiveIcon.style.display = 'none';
+    if (cheatInfoOverlay) cheatInfoOverlay.classList.add('active');
+  });
+}
+
+if (cheatRestartBtn) {
+  cheatRestartBtn.addEventListener('click', () => {
+    sfxClick();
+    if (cheatInfoOverlay) cheatInfoOverlay.classList.remove('active');
+    newGame();
+  });
+}
+
+if (cheatInfoCloseBtn) {
+  cheatInfoCloseBtn.addEventListener('click', () => {
+    sfxClick();
+    if (cheatInfoOverlay) cheatInfoOverlay.classList.remove('active');
+  });
+}
+
+// Tahtaya tıklayınca bloğu silme (Hile modu aktifse)
+boardEl.addEventListener('mousedown', handleBoardClickForCheat);
+boardEl.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 0) handleBoardClickForCheat(e.touches[0]);
+}, {passive: false});
+
+function handleBoardClickForCheat(e) {
+  if (!cheatMode) return;
+  const rect = boardEl.getBoundingClientRect();
+  const padding = 6;
+  const gap = 3;
+  const cellSize = (rect.width - padding * 2 - gap * (BOARD_SIZE - 1)) / BOARD_SIZE;
+
+  const clickX = e.clientX - rect.left - padding;
+  const clickY = e.clientY - rect.top - padding;
+
+  const col = Math.floor(clickX / (cellSize + gap));
+  const row = Math.floor(clickY / (cellSize + gap));
+
+  if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
+    if (board[row][col] !== null) {
+      board[row][col] = null; // Blok silindi
+      sfxClear();
+      addScore(500); // Hile ile silmeye puan
+      createConfetti();
+      renderBoard();
+      saveGameState();
+    }
+  }
+}
+

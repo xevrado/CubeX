@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css?v=1.3.3.1" />
+  <link rel="stylesheet" href="style.css?v=1.3.4.0" />
 </head>
 
 <body>
@@ -308,13 +308,7 @@
   <!-- Floating Score Popup -->
   <div class="score-popup" id="scorePopup"></div>
 
-  <!-- Update Popup -->
-  <div class="update-popup" id="updatePopup" style="display: none;">
-    <button class="close-update-btn" id="closeUpdateBtn">×</button>
-    <h3 class="update-title">Güncelleme Hazır</h3>
-    <p class="update-desc">Oyun deneyiminizi iyileştirmek için güncelleme yapabilirsiniz!</p>
-    <button class="update-btn" id="doUpdateBtn">Güncelle</button>
-  </div>
+
 
   <!-- PWA iOS Install Prompt -->
   <div class="ios-install-prompt" id="iosInstallPrompt">
@@ -341,7 +335,7 @@
     <div class="prompt-arrow"></div>
   </div>
 
-  <script src="game.js?v=1.3.3.1"></script>
+  <script src="game.js?v=1.3.4.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
