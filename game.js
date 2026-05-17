@@ -1526,7 +1526,7 @@ if (saveNameBtn && skipNameBtn && playerNameInput) {
 
 async function submitScore(pName, finalScore) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -1536,12 +1536,21 @@ async function submitScore(pName, finalScore) {
       },
       body: JSON.stringify({ name: pName, score: finalScore })
     });
+    
     if (res.ok) {
       localStorage.setItem('cubex_lastSubmitted', finalScore);
       console.log("Skor Supabase'e başarıyla kaydedildi.");
+      return true;
+    } else {
+      const errText = await res.text();
+      console.error("Supabase Hatası:", errText);
+      alert("Veritabanı Hatası: " + errText);
+      return false;
     }
   } catch(e) {
     console.error("Skor yüklenemedi", e);
+    alert("Bağlantı hatası: " + e.message);
+    return false;
   }
 }
 
@@ -1704,9 +1713,11 @@ if (adminAddScoreBtn) {
     }
     
     adminAddScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
-    await submitScore(nameInput, valInput);
+    const success = await submitScore(nameInput, valInput);
     adminAddScoreBtn.innerHTML = '<i class="fas fa-upload"></i> Skoru Yükle';
-    alert(`${nameInput} adlı oyuncuya ${valInput} puan eklendi/güncellendi.`);
+    if (success) {
+      alert(`${nameInput} adlı oyuncuya ${valInput} puan eklendi/güncellendi.`);
+    }
   });
 }
 
