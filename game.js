@@ -911,12 +911,31 @@ function gameOver() {
   const subEl = gameOverOverlay.querySelector('.overlay-sub');
   if (typeof cheatUsedInThisGame !== 'undefined' && cheatUsedInThisGame) {
     if (subEl) subEl.textContent = "Hile kullanıldı, puan kaydedilmedi";
+    gameOverOverlay.classList.add('active');
+    clearGameState(); // Oyun bitti, kaydı temizle
   } else {
     if (subEl) subEl.textContent = "Yerleştirecek yer kalmadı";
+    clearGameState();
+    
+    // Eğer sıfırdan büyük bir skor varsa, leaderboard'a gönderilmeyi denesin
+    const lastSubmitted = parseInt(localStorage.getItem('cubex_lastSubmitted') || '0');
+    if (score > 0 && score > lastSubmitted) {
+      let pName = localStorage.getItem('cubex_playerName');
+      if (!pName) {
+        // İsim yoksa sor
+        document.getElementById('nameOverlay').classList.add('active');
+        // Oyuncuya skoru hatırlat
+        const nameOverlaySub = document.querySelector('#nameOverlay .overlay-sub');
+        if (nameOverlaySub) nameOverlaySub.textContent = `Skorun: ${score} - Liderlik tablosu için ismini gir`;
+      } else {
+        // İsim varsa direkt gönder
+        submitScore(pName, score);
+        gameOverOverlay.classList.add('active');
+      }
+    } else {
+      gameOverOverlay.classList.add('active');
+    }
   }
-  
-  gameOverOverlay.classList.add('active');
-  clearGameState(); // Oyun bitti, kaydı temizle
 }
 
 // ---- New Game ----
@@ -1457,34 +1476,81 @@ if (closeLeaderboardBtn) {
   });
 }
 
-function loadLeaderboard() {
+const SUPABASE_URL = "https://wrdlbqhlszqskhbignot.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyZGxicWhsc3pxc2toYmlnbm90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMjkxMzEsImV4cCI6MjA5NDYwNTEzMX0.WcTwqQVH3hkHyIpNwwXxY9oKcdcF0eW6fcChvSAZKq4";
+
+// ---- Name Overlay Logic ----
+const saveNameBtn = document.getElementById('saveNameBtn');
+const skipNameBtn = document.getElementById('skipNameBtn');
+const playerNameInput = document.getElementById('playerNameInput');
+const nameOverlay = document.getElementById('nameOverlay');
+
+if (saveNameBtn && skipNameBtn && playerNameInput) {
+  saveNameBtn.addEventListener('click', () => {
+    sfxClick();
+    const pName = playerNameInput.value.trim().substring(0, 12);
+    if (pName.length > 0) {
+      localStorage.setItem('cubex_playerName', pName);
+      nameOverlay.classList.remove('active');
+      submitScore(pName, score);
+      gameOverOverlay.classList.add('active');
+    } else {
+      alert("Lütfen geçerli bir isim girin.");
+    }
+  });
+
+  skipNameBtn.addEventListener('click', () => {
+    sfxClick();
+    nameOverlay.classList.remove('active');
+    gameOverOverlay.classList.add('active');
+  });
+}
+
+async function submitScore(pName, finalScore) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ name: pName, score: finalScore })
+    });
+    if (res.ok) {
+      localStorage.setItem('cubex_lastSubmitted', finalScore);
+      console.log("Skor Supabase'e başarıyla kaydedildi.");
+    }
+  } catch(e) {
+    console.error("Skor yüklenemedi", e);
+  }
+}
+
+async function loadLeaderboard() {
   if (!leaderboardList) return;
   
   leaderboardList.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
   
-  // Şimdilik test amaçlı sahte veriler (Veritabanı bağlanana kadar)
-  setTimeout(() => {
-    // Burada ileride Supabase'den veri çekeceğiz
-    const dummyScores = [
-      { name: "CubeMaster", score: 12500 },
-      { name: "xevrado", score: 8400 },
-      { name: "PuzzleKing", score: 6200 },
-      { name: "BlockBreaker", score: 4100 },
-      { name: "Oyuncu123", score: 2500 }
-    ];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=25`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
     
-    // Kendi en iyi skorumuzu listeye ekle
-    const myBest = parseInt(localStorage.getItem('cubex_best') || '0');
-    if (myBest > 0 && !dummyScores.some(s => s.name === "Sen" && s.score === myBest)) {
-      dummyScores.push({ name: "Sen (Yerel)", score: myBest });
-    }
-    
-    // Skorları sırala
-    dummyScores.sort((a, b) => b.score - a.score);
+    if (!res.ok) throw new Error("API Hatası");
+    const data = await res.json();
     
     leaderboardList.innerHTML = '';
     
-    dummyScores.slice(0, 10).forEach((data, index) => {
+    if (data.length === 0) {
+      leaderboardList.innerHTML = '<div class="leaderboard-loading">Henüz hiç skor yok! İlk sen ol!</div>';
+      return;
+    }
+    
+    data.forEach((itemData, index) => {
       const rank = index + 1;
       let rankClass = '';
       if (rank === 1) rankClass = 'top-1';
@@ -1495,12 +1561,16 @@ function loadLeaderboard() {
       item.className = `lb-item ${rankClass}`;
       item.innerHTML = `
         <span class="lb-rank">${rank}</span>
-        <span class="lb-name">${data.name}</span>
-        <span class="lb-score">${data.score}</span>
+        <span class="lb-name">${itemData.name}</span>
+        <span class="lb-score">${itemData.score}</span>
       `;
       leaderboardList.appendChild(item);
     });
-  }, 600); // 600ms sahte bekleme süresi
+    
+  } catch(e) {
+    console.error(e);
+    leaderboardList.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
+  }
 }
 
 // ---- Cheat Mode Logic ----
