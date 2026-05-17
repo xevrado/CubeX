@@ -1381,6 +1381,9 @@ function initApp() {
   }
 
   initIOSInstallPrompt();
+  
+  // App açıldığında bekleyen skor varsa göndermeyi dene
+  setTimeout(syncPendingScore, 2000);
 }
 
 function initIOSInstallPrompt() {
@@ -1507,6 +1510,11 @@ if (saveNameBtn && skipNameBtn && playerNameInput) {
 }
 
 async function submitScore(pName, finalScore) {
+  if (!navigator.onLine) {
+    savePendingScore(pName, finalScore);
+    return;
+  }
+  
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
       method: 'POST',
@@ -1520,12 +1528,43 @@ async function submitScore(pName, finalScore) {
     });
     if (res.ok) {
       localStorage.setItem('cubex_lastSubmitted', finalScore);
+      localStorage.removeItem('cubex_pendingScore');
+      localStorage.removeItem('cubex_pendingName');
       console.log("Skor Supabase'e başarıyla kaydedildi.");
+    } else {
+      savePendingScore(pName, finalScore);
     }
   } catch(e) {
     console.error("Skor yüklenemedi", e);
+    savePendingScore(pName, finalScore);
   }
 }
+
+function savePendingScore(pName, finalScore) {
+  const currentPending = parseInt(localStorage.getItem('cubex_pendingScore') || '0');
+  const lastSubmitted = parseInt(localStorage.getItem('cubex_lastSubmitted') || '0');
+  
+  // Sadece daha önce gönderilmemiş en yüksek skoru yedekte tut
+  if (finalScore > currentPending && finalScore > lastSubmitted) {
+    localStorage.setItem('cubex_pendingScore', finalScore);
+    localStorage.setItem('cubex_pendingName', pName);
+    console.log("İnternet bağlantısı yok veya hata oluştu. Skor yedeğe alındı, internet gelince yüklenecek.");
+  }
+}
+
+async function syncPendingScore() {
+  if (!navigator.onLine) return;
+  const pendingScore = parseInt(localStorage.getItem('cubex_pendingScore') || '0');
+  const pendingName = localStorage.getItem('cubex_pendingName');
+  
+  if (pendingScore > 0 && pendingName) {
+    console.log("Bağlantı geldi! Bekleyen yedek skor yükleniyor...");
+    await submitScore(pendingName, pendingScore);
+  }
+}
+
+// İnternet geldiği an otomatik senkronizasyon tetikle
+window.addEventListener('online', syncPendingScore);
 
 async function loadLeaderboard() {
   if (!leaderboardList) return;
