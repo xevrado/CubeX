@@ -3,8 +3,7 @@
   "appName": "CubeX",
   "webDir": "www",
   "server": {
-    "url": "https://bright-pixie-ef2976.netlify.app",
-    "cleartext": true
+    "androidScheme": "https"
   },
   "android": {
     "backgroundColor": "#0a0a1a"
