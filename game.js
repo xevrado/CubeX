@@ -1172,7 +1172,6 @@ function initApp() {
   createParticles();
   
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const downloadBtn = document.getElementById('downloadBtn');
   const mainMenuOverlay = document.getElementById('mainMenuOverlay');
   const startBtn = document.getElementById('startBtn');
   const resumeBtn = document.getElementById('resumeBtn');
@@ -1224,16 +1223,7 @@ function initApp() {
     });
   }
 
-  // iOS'da İndir butonunu gizle (APK çalışmayacağı için)
-  if (isIOS) {
-    if (downloadBtn) downloadBtn.style.display = 'none';
-  }
 
-  // Güncelleme ve Bakım kontrolünü tüm platformlar için yap
-  if (navigator.onLine) {
-    const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
-    if (isAndroid && downloadBtn) downloadBtn.style.display = 'none';
-  }
 
   initIOSInstallPrompt();
 }
