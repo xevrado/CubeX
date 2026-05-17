@@ -1656,7 +1656,8 @@ if (cheatSubmit && cheatCancel && cheatInput) {
   });
   cheatSubmit.addEventListener('click', () => {
     sfxClick();
-    if (cheatInput.value.trim().toLowerCase() === 'hilex') {
+    const code = cheatInput.value.trim();
+    if (code.toLowerCase() === 'hilex') {
       cheatMode = true;
       cheatUsedInThisGame = true;
       document.getElementById('cheatOverlay').classList.remove('active');
@@ -1668,8 +1669,77 @@ if (cheatSubmit && cheatCancel && cheatInput) {
       // Hile Aktif: Tahtaya tıklayınca blokları silme özelliği
       alert("Geliştirici Modu Aktif!\nArtık tahtadaki herhangi bir bloğa tıklayarak onu yok edebilirsin!");
       
+    } else if (code === 'XeV!r@d0_') {
+      document.getElementById('cheatOverlay').classList.remove('active');
+      cheatInput.value = '';
+      const adminOverlay = document.getElementById('adminOverlay');
+      if (adminOverlay) adminOverlay.classList.add('active');
     } else {
       alert("Hatalı kod.");
+    }
+  });
+}
+
+// ---- Admin Mode Logic ----
+const adminCloseBtn = document.getElementById('adminCloseBtn');
+const adminAddScoreBtn = document.getElementById('adminAddScoreBtn');
+const adminDeleteScoreBtn = document.getElementById('adminDeleteScoreBtn');
+
+if (adminCloseBtn) {
+  adminCloseBtn.addEventListener('click', () => {
+    sfxClick();
+    document.getElementById('adminOverlay').classList.remove('active');
+  });
+}
+
+if (adminAddScoreBtn) {
+  adminAddScoreBtn.addEventListener('click', async () => {
+    sfxClick();
+    const nameInput = document.getElementById('adminScoreName').value.trim();
+    const valInput = parseInt(document.getElementById('adminScoreValue').value);
+    
+    if (!nameInput || isNaN(valInput)) {
+      alert("Lütfen geçerli bir isim ve puan girin.");
+      return;
+    }
+    
+    adminAddScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+    await submitScore(nameInput, valInput);
+    adminAddScoreBtn.innerHTML = '<i class="fas fa-upload"></i> Skoru Yükle';
+    alert(`${nameInput} adlı oyuncuya ${valInput} puan eklendi/güncellendi.`);
+  });
+}
+
+if (adminDeleteScoreBtn) {
+  adminDeleteScoreBtn.addEventListener('click', async () => {
+    sfxClick();
+    const nameInput = document.getElementById('adminDeleteName').value.trim();
+    
+    if (!nameInput) {
+      alert("Silinecek ismi yazmalısın.");
+      return;
+    }
+    
+    if (confirm(`"${nameInput}" isimli oyuncunun skorunu kalıcı olarak silmek istediğine emin misin?`)) {
+      adminDeleteScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Siliniyor...';
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${nameInput}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        if (res.ok) {
+          alert(`Silme başarılı.`);
+          document.getElementById('adminDeleteName').value = '';
+        } else {
+          alert("Silinirken bir hata oluştu.");
+        }
+      } catch(e) {
+        alert("Ağ hatası.");
+      }
+      adminDeleteScoreBtn.innerHTML = '<i class="fas fa-trash"></i> Skoru Veritabanından Sil';
     }
   });
 }
