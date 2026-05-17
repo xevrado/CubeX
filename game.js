@@ -577,7 +577,7 @@ function addScore(pts) {
   levelEl.textContent = level;
 
   // Best
-  if (score > bestScore) {
+  if ((typeof cheatUsedInThisGame === 'undefined' || !cheatUsedInThisGame) && score > bestScore) {
     bestScore = score;
     bestEl.textContent = bestScore;
     localStorage.setItem('cubex_best', bestScore);
@@ -907,12 +907,25 @@ function gameOver() {
   finalScoreEl.textContent = score;
   finalBestEl.textContent = bestScore;
   finalLevelEl.textContent = level;
+  
+  const subEl = gameOverOverlay.querySelector('.overlay-sub');
+  if (typeof cheatUsedInThisGame !== 'undefined' && cheatUsedInThisGame) {
+    if (subEl) subEl.textContent = "Hile kullanıldı, puan kaydedilmedi";
+  } else {
+    if (subEl) subEl.textContent = "Yerleştirecek yer kalmadı";
+  }
+  
   gameOverOverlay.classList.add('active');
   clearGameState(); // Oyun bitti, kaydı temizle
 }
 
 // ---- New Game ----
 function newGame() {
+  if (typeof cheatUsedInThisGame !== 'undefined') cheatUsedInThisGame = false;
+  if (typeof cheatMode !== 'undefined') cheatMode = false;
+  const cheatIcon = document.getElementById('cheatActiveIcon');
+  if (cheatIcon) cheatIcon.style.display = 'none';
+
   score = 0;
   level = 1;
   combo = 0;
@@ -1422,3 +1435,215 @@ function createConfetti() {
     }, duration * 1000 + 100);
   }
 }
+
+// ---- Leaderboard Logic ----
+const showLeaderboardBtn = document.getElementById('showLeaderboardBtn');
+const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
+const leaderboardOverlay = document.getElementById('leaderboardOverlay');
+const leaderboardList = document.getElementById('leaderboardList');
+
+if (showLeaderboardBtn) {
+  showLeaderboardBtn.addEventListener('click', () => {
+    sfxClick();
+    if (leaderboardOverlay) leaderboardOverlay.classList.add('active');
+    loadLeaderboard();
+  });
+}
+
+if (closeLeaderboardBtn) {
+  closeLeaderboardBtn.addEventListener('click', () => {
+    sfxClick();
+    if (leaderboardOverlay) leaderboardOverlay.classList.remove('active');
+  });
+}
+
+function loadLeaderboard() {
+  if (!leaderboardList) return;
+  
+  leaderboardList.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
+  
+  // Şimdilik test amaçlı sahte veriler (Veritabanı bağlanana kadar)
+  setTimeout(() => {
+    // Burada ileride Supabase'den veri çekeceğiz
+    const dummyScores = [
+      { name: "CubeMaster", score: 12500 },
+      { name: "xevrado", score: 8400 },
+      { name: "PuzzleKing", score: 6200 },
+      { name: "BlockBreaker", score: 4100 },
+      { name: "Oyuncu123", score: 2500 }
+    ];
+    
+    // Kendi en iyi skorumuzu listeye ekle
+    const myBest = parseInt(localStorage.getItem('cubex_best') || '0');
+    if (myBest > 0 && !dummyScores.some(s => s.name === "Sen" && s.score === myBest)) {
+      dummyScores.push({ name: "Sen (Yerel)", score: myBest });
+    }
+    
+    // Skorları sırala
+    dummyScores.sort((a, b) => b.score - a.score);
+    
+    leaderboardList.innerHTML = '';
+    
+    dummyScores.slice(0, 10).forEach((data, index) => {
+      const rank = index + 1;
+      let rankClass = '';
+      if (rank === 1) rankClass = 'top-1';
+      else if (rank === 2) rankClass = 'top-2';
+      else if (rank === 3) rankClass = 'top-3';
+      
+      const item = document.createElement('div');
+      item.className = `lb-item ${rankClass}`;
+      item.innerHTML = `
+        <span class="lb-rank">${rank}</span>
+        <span class="lb-name">${data.name}</span>
+        <span class="lb-score">${data.score}</span>
+      `;
+      leaderboardList.appendChild(item);
+    });
+  }, 600); // 600ms sahte bekleme süresi
+}
+
+// ---- Cheat Mode Logic ----
+let cheatStage = 0;
+let trCount = 0;
+let blCount = 0;
+let cheatTimer = null;
+let cheatMode = false;
+let cheatUsedInThisGame = false;
+
+function handleCheatTap(clientX, clientY) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  
+  // Right Top Corner (80x80px)
+  const isTopRight = clientX > w - 80 && clientY < 80;
+  // Left Bottom Corner (80x80px)
+  const isBottomLeft = clientX < 80 && clientY > h - 80;
+
+  if (cheatStage === 0 && isTopRight) {
+    trCount++;
+    if (trCount === 7) {
+      cheatStage = 1;
+      cheatTimer = setTimeout(() => {
+        cheatStage = 0;
+        trCount = 0;
+        blCount = 0;
+      }, 7000);
+    }
+  } else if (cheatStage === 1 && isBottomLeft) {
+    blCount++;
+    if (blCount === 7) {
+      clearTimeout(cheatTimer);
+      cheatStage = 0;
+      trCount = 0;
+      blCount = 0;
+      showCheatDialog();
+    }
+  }
+}
+
+document.addEventListener('touchstart', (e) => {
+  if(e.touches.length > 0) {
+    handleCheatTap(e.touches[0].clientX, e.touches[0].clientY);
+  }
+});
+document.addEventListener('mousedown', (e) => {
+  handleCheatTap(e.clientX, e.clientY);
+});
+
+function showCheatDialog() {
+  const overlay = document.getElementById('cheatOverlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+const cheatSubmit = document.getElementById('cheatSubmit');
+const cheatCancel = document.getElementById('cheatCancel');
+const cheatInput = document.getElementById('cheatInput');
+
+if (cheatSubmit && cheatCancel && cheatInput) {
+  cheatCancel.addEventListener('click', () => {
+    document.getElementById('cheatOverlay').classList.remove('active');
+    cheatInput.value = '';
+    sfxClick();
+  });
+  cheatSubmit.addEventListener('click', () => {
+    sfxClick();
+    if (cheatInput.value.trim().toLowerCase() === 'hilex') {
+      cheatMode = true;
+      cheatUsedInThisGame = true;
+      document.getElementById('cheatOverlay').classList.remove('active');
+      cheatInput.value = '';
+      
+      const cheatIcon = document.getElementById('cheatActiveIcon');
+      if (cheatIcon) cheatIcon.style.setProperty('display', 'flex', 'important');
+      
+      // Hile Aktif: Tahtaya tıklayınca blokları silme özelliği
+      alert("Geliştirici Modu Aktif!\nArtık tahtadaki herhangi bir bloğa tıklayarak onu yok edebilirsin!");
+      
+    } else {
+      alert("Hatalı kod.");
+    }
+  });
+}
+
+// Cheat Disable / Icon Logic
+const cheatActiveIcon = document.getElementById('cheatActiveIcon');
+const cheatInfoOverlay = document.getElementById('cheatInfoOverlay');
+const cheatRestartBtn = document.getElementById('cheatRestartBtn');
+const cheatInfoCloseBtn = document.getElementById('cheatInfoCloseBtn');
+
+if (cheatActiveIcon) {
+  cheatActiveIcon.addEventListener('click', () => {
+    sfxClick();
+    cheatMode = false;
+    cheatActiveIcon.style.display = 'none';
+    if (cheatInfoOverlay) cheatInfoOverlay.classList.add('active');
+  });
+}
+
+if (cheatRestartBtn) {
+  cheatRestartBtn.addEventListener('click', () => {
+    sfxClick();
+    if (cheatInfoOverlay) cheatInfoOverlay.classList.remove('active');
+    newGame();
+  });
+}
+
+if (cheatInfoCloseBtn) {
+  cheatInfoCloseBtn.addEventListener('click', () => {
+    sfxClick();
+    if (cheatInfoOverlay) cheatInfoOverlay.classList.remove('active');
+  });
+}
+
+// Tahtaya tıklayınca bloğu silme (Hile modu aktifse)
+boardEl.addEventListener('mousedown', handleBoardClickForCheat);
+boardEl.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 0) handleBoardClickForCheat(e.touches[0]);
+}, {passive: false});
+
+function handleBoardClickForCheat(e) {
+  if (!cheatMode) return;
+  const rect = boardEl.getBoundingClientRect();
+  const padding = 6;
+  const gap = 3;
+  const cellSize = (rect.width - padding * 2 - gap * (BOARD_SIZE - 1)) / BOARD_SIZE;
+
+  const clickX = e.clientX - rect.left - padding;
+  const clickY = e.clientY - rect.top - padding;
+
+  const col = Math.floor(clickX / (cellSize + gap));
+  const row = Math.floor(clickY / (cellSize + gap));
+
+  if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
+    if (board[row][col] !== null) {
+      board[row][col] = null; // Blok silindi
+      sfxClear();
+      addScore(500); // Hile ile silmeye puan
+      createConfetti();
+      renderBoard();
+      saveGameState();
+    }
+  }
+}
+

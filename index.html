@@ -8,7 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#020617" />
-  <meta name="description" content="CubeX - Modern blok bulmaca oyunu. Stratejik düşün, satır ve sütunları tamamla, combo yap!" />
+  <meta name="description"
+    content="CubeX - Modern blok bulmaca oyunu. Stratejik düşün, satır ve sütunları tamamla, combo yap!" />
   <meta property="og:title" content="CubeX – Puzzle Game" />
   <meta property="og:description" content="CubeX - Modern blok bulmaca oyunu. Stratejik düşün, combo yap!" />
   <meta property="og:type" content="website" />
@@ -20,9 +21,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="167x167" href="icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -37,8 +36,10 @@
     <!-- Header -->
     <header class="game-header">
       <div class="header-left">
-        <button class="icon-btn" id="homeBtn" title="Ana Menü" aria-label="Ana Menü"><i class="fas fa-house"></i></button>
-        <button class="icon-btn" id="restartBtn" title="Yeniden Başla" aria-label="Yeniden Başla"><i class="fas fa-rotate-left"></i></button>
+        <button class="icon-btn" id="homeBtn" title="Ana Menü" aria-label="Ana Menü"><i
+            class="fas fa-house"></i></button>
+        <button class="icon-btn" id="restartBtn" title="Yeniden Başla" aria-label="Yeniden Başla"><i
+            class="fas fa-rotate-left"></i></button>
         <span class="app-title">CubeX</span>
       </div>
       <div class="header-right">
@@ -48,8 +49,10 @@
           <span class="download-btn-border"></span>
           <span class="download-btn-content"><i class="fas fa-download"></i> İndir</span>
         </a>
-        <button class="icon-btn" id="soundBtn" title="Ses" aria-label="Ses Aç/Kapat"><i class="fas fa-volume-up"></i></button>
-        <button class="icon-btn" id="helpBtn" title="Yardım" aria-label="Yardım"><i class="fas fa-question-circle"></i></button>
+        <button class="icon-btn" id="soundBtn" title="Ses" aria-label="Ses Aç/Kapat"><i
+            class="fas fa-volume-up"></i></button>
+        <button class="icon-btn" id="helpBtn" title="Yardım" aria-label="Yardım"><i
+            class="fas fa-question-circle"></i></button>
       </div>
     </header>
 
@@ -105,9 +108,11 @@
       <button class="overlay-btn primary-btn menu-play-btn" id="resumeBtn" style="display:none; margin-bottom: 10px;">
         <i class="fas fa-play"></i> Devam Et
       </button>
-      <button class="overlay-btn primary-btn menu-play-btn" id="startBtn">
-        <i class="fas fa-gamepad"></i> Yeni Oyun — <span class="menu-best-text">[En İyi: <span id="menuBestDisplay">0</span>
-          p.]</span>
+      <button class="overlay-btn primary-btn menu-play-btn" id="startBtn" style="margin-bottom: 10px;">
+        <i class="fas fa-gamepad"></i> Yeni Oyun — <span class="menu-best-text">[En İyi: <span id="menuBestDisplay">0</span> p.]</span>
+      </button>
+      <button class="overlay-btn secondary-btn menu-play-btn" id="showLeaderboardBtn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+        <i class="fas fa-trophy" style="color: #fbbf24;"></i> Liderlik Tablosu
       </button>
 
       <div class="menu-footer">
@@ -126,6 +131,22 @@
         <div class="contact-info">İletişim: xevrado@gmail.com</div>
         <div class="copyright">© 2026 CubeX</div>
       </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard Overlay -->
+  <div class="overlay" id="leaderboardOverlay">
+    <div class="overlay-card leaderboard-card" style="max-width: 360px;">
+      <div class="overlay-emoji"><i class="fas fa-trophy" style="color: #fbbf24;"></i></div>
+      <h2 class="overlay-title">En İyiler</h2>
+      
+      <div class="leaderboard-list" id="leaderboardList">
+        <!-- JS ile doldurulacak -->
+      </div>
+
+      <button class="overlay-btn secondary-btn" id="closeLeaderboardBtn" style="margin-top: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+        <i class="fas fa-times"></i> Kapat
+      </button>
     </div>
   </div>
 
@@ -190,7 +211,8 @@
       <h2 class="overlay-title" id="confirmTitle">Emin misin?</h2>
       <p class="overlay-sub" id="confirmMessage">Mevcut oyun silinecek.</p>
       <div style="display: flex; gap: 12px; margin-top: 18px;">
-        <button class="overlay-btn secondary-btn" id="confirmNo" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+        <button class="overlay-btn secondary-btn" id="confirmNo"
+          style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
           <i class="fas fa-times"></i> Hayır
         </button>
         <button class="overlay-btn primary-btn" id="confirmYes" style="flex:1;">
@@ -204,7 +226,7 @@
   <div class="overlay" id="cheatOverlay">
     <div class="overlay-card" style="max-width: 320px; text-align: center;">
       <div class="overlay-emoji"><i class="fas fa-terminal" style="color: #0ea5e9;"></i></div>
-      <h2 class="overlay-title">Gizli Bölüm</h2>
+      <h2 class="overlay-title">Geliştirici Bölümü</h2>
       <p class="overlay-sub">Geliştirici kodunu girin</p>
       <input type="text" id="cheatInput" class="cheat-input" placeholder="Kod" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
       <div style="display: flex; gap: 12px; margin-top: 18px;">
@@ -217,6 +239,26 @@
       </div>
     </div>
   </div>
+
+  <!-- Cheat Disable Info Overlay -->
+  <div class="overlay" id="cheatInfoOverlay">
+    <div class="overlay-card" style="max-width: 340px; text-align: center;">
+      <div class="overlay-emoji"><i class="fas fa-info-circle" style="color: #0ea5e9;"></i></div>
+      <h2 class="overlay-title">Bilgi</h2>
+      <p class="overlay-sub" style="font-size: 15px; margin-bottom: 5px;">Hile modu kullandığınız için puan kaydedilmeyecek. Yeniden başlatınız.</p>
+      <button class="overlay-btn primary-btn" id="cheatRestartBtn" style="margin-top: 15px;">
+        <i class="fas fa-rotate-left"></i> Yeniden Başlat
+      </button>
+      <button class="overlay-btn secondary-btn" id="cheatInfoCloseBtn" style="margin-top: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+        <i class="fas fa-times"></i> Kapat
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Cheat Active Icon -->
+  <button id="cheatActiveIcon" class="icon-btn" style="display:none; position:fixed; right:25px; bottom:25px; z-index:99999; background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.6); width:50px; height:50px; border-radius:50%; align-items:center; justify-content:center; border:none; color:white; cursor:pointer; font-size: 20px;" title="Hile Modunu Kapat">
+    <i class="fas fa-bug"></i>
+  </button>
 
   <!-- Floating Score Popup -->
   <div class="score-popup" id="scorePopup"></div>
