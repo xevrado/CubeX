@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubex-v1.3.3.0-p1779039673037';
+const CACHE_NAME = 'cubex-v1.3.3.0-p1779042380155';
 const ASSETS = [
   './',
   'index.html',
