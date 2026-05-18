@@ -334,11 +334,11 @@ function generatePieces() {
         const normalizedCluster = normalizeCells(cluster);
         const clusterKey = normalizedCluster.map(c => c.join(',')).sort().join('|');
         if (shapeKey === clusterKey) {
-          weight += 15.0; // Tam eşleşmeye büyük bonus
+          weight += 18.0; // %20 artırılmış tam eşleşme bonusu (15.0 -> 18.0)
         }
       } else if (cluster.length > shape.cells.length && cluster.length <= 9) {
-        // Şekil bu boşluğa sığıyor mu? (Küçük boşluklar için basit ihtimal artışı)
-        weight += 1.5;
+        // Şekil bu boşluğa sığıyor mu? (Küçük boşluklar için %20 artırılmış ihtimal artışı: 1.5 -> 1.8)
+        weight += 1.8;
       }
     }
 
