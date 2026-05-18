@@ -585,6 +585,9 @@ function addScore(pts) {
     const menuBestDisplay = document.getElementById('menuBestDisplay');
     if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
   }
+  
+  // Real-time progress bar'ı güncelle
+  updateScoreProgress();
 }
 
 function showScorePopup(pts) {
@@ -917,9 +920,9 @@ function gameOver() {
     if (subEl) subEl.textContent = "Yerleştirecek yer kalmadı";
     clearGameState();
     
-    // Eğer sıfırdan büyük bir skor varsa, leaderboard'a gönderilmeyi denesin
+    // Eğer 1000 puan barajı geçildiyse ve son gönderilen skordan büyükse leaderboard'a gönderilmeyi denesin
     const lastSubmitted = parseInt(localStorage.getItem('cubex_lastSubmitted') || '0');
-    if (score > 0 && score > lastSubmitted) {
+    if (score >= 1000 && score > lastSubmitted) {
       let pName = localStorage.getItem('cubex_playerName');
       if (!pName) {
         // İsim yoksa sor
@@ -961,6 +964,7 @@ function newGame() {
   generatePieces();
   renderTray();
   gameActive = true;
+  updateScoreProgress();
   saveGameState();
 }
 
@@ -1225,6 +1229,18 @@ function initApp() {
 
 
 
+  // Liderlik tablosu puan ilerlemesini ilk defa güncelle
+  updateScoreProgress();
+
+  // Oyuna girince isim kontrolü yap
+  const localName = localStorage.getItem('cubex_playerName');
+  const nameOverlay = document.getElementById('nameOverlay');
+  if (!localName) {
+    if (nameOverlay) nameOverlay.classList.add('active');
+  } else {
+    checkNameCensorship();
+  }
+
   initIOSInstallPrompt();
 }
 
@@ -1344,29 +1360,219 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // ---- Name Overlay Logic ----
 const saveNameBtn = document.getElementById('saveNameBtn');
-const skipNameBtn = document.getElementById('skipNameBtn');
 const playerNameInput = document.getElementById('playerNameInput');
 const nameOverlay = document.getElementById('nameOverlay');
 
-if (saveNameBtn && skipNameBtn && playerNameInput) {
+if (saveNameBtn && playerNameInput) {
   saveNameBtn.addEventListener('click', () => {
     sfxClick();
     const pName = playerNameInput.value.trim().substring(0, 12);
     if (pName.length > 0) {
+      if (/^Oyuncu\d+$/.test(pName)) {
+        alert("Seçeceğiniz isim 'Oyuncu[Sayı]' formatında olamaz.");
+        return;
+      }
       localStorage.setItem('cubex_playerName', pName);
       nameOverlay.classList.remove('active');
-      submitScore(pName, score);
-      gameOverOverlay.classList.add('active');
+      
+      // Eğer game over flow içindeyse skoru gönder
+      if (gameOverOverlay && !gameOverOverlay.classList.contains('active') && score >= 1000) {
+        submitScore(pName, score);
+        gameOverOverlay.classList.add('active');
+      }
+      
+      checkNameCensorship();
     } else {
       alert("Lütfen geçerli bir isim girin.");
     }
   });
+}
 
-  skipNameBtn.addEventListener('click', () => {
+// Header Trophy / Leaderboard Button Logic
+const headerLeaderboardBtn = document.getElementById('headerLeaderboardBtn');
+if (headerLeaderboardBtn) {
+  headerLeaderboardBtn.addEventListener('click', () => {
     sfxClick();
-    nameOverlay.classList.remove('active');
-    gameOverOverlay.classList.add('active');
+    if (gameActive) {
+      saveGameState();
+    }
+    if (leaderboardOverlay) leaderboardOverlay.classList.add('active');
+    loadLeaderboard();
   });
+}
+
+// ---- Censor Name & Progress Logic ----
+const censorKeepBtn = document.getElementById('censorKeepBtn');
+const censorSaveBtn = document.getElementById('censorSaveBtn');
+const newPlayerNameInput = document.getElementById('newPlayerNameInput');
+
+if (censorKeepBtn) {
+  censorKeepBtn.addEventListener('click', () => {
+    sfxClick();
+    document.getElementById('censorRenameOverlay').classList.remove('active');
+  });
+}
+
+if (censorSaveBtn && newPlayerNameInput) {
+  censorSaveBtn.addEventListener('click', () => {
+    sfxClick();
+    const oldName = document.getElementById('censoredOldName').textContent;
+    const newName = newPlayerNameInput.value.trim().substring(0, 12);
+    censorRenameScore(oldName, newName);
+  });
+}
+
+async function censorRenameScore(oldName, newName) {
+  const censorSaveBtn = document.getElementById('censorSaveBtn');
+  if (!newName) {
+    alert("Lütfen geçerli bir yeni isim girin.");
+    return;
+  }
+  
+  if (/^Oyuncu\d+$/.test(newName)) {
+    alert("Seçeceğiniz yeni isim 'Oyuncu[Sayı]' formatında olamaz.");
+    return;
+  }
+  
+  if (censorSaveBtn) censorSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Güncelleniyor...';
+  
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(oldName)}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name: newName })
+    });
+    
+    if (res.ok) {
+      localStorage.setItem('cubex_playerName', newName);
+      document.getElementById('censorRenameOverlay').classList.remove('active');
+      alert(`İsminiz başarıyla "${newName}" olarak güncellendi!`);
+      loadLeaderboard();
+    } else {
+      alert("İsim değiştirilemedi (Bu isim başkası tarafından kullanılıyor olabilir).");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Ağ hatası oluştu.");
+  } finally {
+    if (censorSaveBtn) censorSaveBtn.innerHTML = '<i class="fas fa-check"></i> Değiştir';
+  }
+}
+
+async function checkNameCensorship() {
+  const localName = localStorage.getItem('cubex_playerName');
+  const localBest = parseInt(localStorage.getItem('cubex_best') || '0');
+  
+  if (!localName) return;
+  
+  if (/^Oyuncu\d+$/.test(localName)) {
+    showCensorPrompt(localName);
+    return;
+  }
+  
+  if (localBest < 1000) return;
+  
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(localName)}&select=score`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.length === 0) {
+        const censorRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${localBest}&name=like.Oyuncu*&select=name`, {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        
+        if (censorRes.ok) {
+          const censorData = await censorRes.json();
+          if (censorData && censorData.length > 0) {
+            const newName = censorData[0].name;
+            localStorage.setItem('cubex_playerName', newName);
+            showCensorPrompt(newName);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Censorship check error:", err);
+  }
+}
+
+function showCensorPrompt(censoredName) {
+  const overlay = document.getElementById('censorRenameOverlay');
+  const oldNameText = document.getElementById('censoredOldName');
+  if (overlay && oldNameText) {
+    oldNameText.textContent = censoredName;
+    overlay.classList.add('active');
+  }
+}
+
+function updateScoreProgress() {
+  const progressContainer = document.getElementById('scoreProgressContainer');
+  const progressLabel = document.getElementById('progressLabel');
+  const progressValue = document.getElementById('progressValue');
+  const progressBarFill = document.getElementById('progressBarFill');
+  
+  if (!progressContainer || !progressLabel || !progressValue || !progressBarFill) return;
+  
+  const currentScore = score;
+  const currentBest = bestScore || 0;
+  
+  if (currentScore < 1000) {
+    progressLabel.textContent = "Liderlik Tablosu Barajı";
+    progressValue.textContent = `${currentScore} / 1000`;
+    const pct = Math.min(100, (currentScore / 1000) * 100);
+    progressBarFill.style.width = `${pct}%`;
+  } else {
+    let target = Math.max(currentBest, 1000);
+    if (currentScore >= target) {
+      target = Math.ceil((currentScore + 1) / 1000) * 1000;
+      progressLabel.textContent = "Yeni Rekor Yolunda";
+    } else {
+      progressLabel.textContent = "Kişisel Rekor Hedefi";
+    }
+    
+    progressValue.textContent = `${currentScore} / ${target}`;
+    const pct = Math.min(100, (currentScore / target) * 100);
+    progressBarFill.style.width = `${pct}%`;
+  }
+}
+
+function updateStickySelfRankVisibility() {
+  const container = document.getElementById('leaderboardList');
+  const stickySelfRank = document.getElementById('stickySelfRank');
+  if (!container || !stickySelfRank) return;
+  
+  if (!window.selfRank) {
+    stickySelfRank.style.display = 'none';
+    return;
+  }
+  
+  const selfElement = document.getElementById('selfLeaderboardItem');
+  if (selfElement) {
+    const containerRect = container.getBoundingClientRect();
+    const elemRect = selfElement.getBoundingClientRect();
+    
+    const isVisible = (elemRect.top >= containerRect.top) && (elemRect.bottom <= containerRect.bottom);
+    if (isVisible) {
+      stickySelfRank.style.display = 'none';
+    } else {
+      stickySelfRank.style.display = 'block';
+    }
+  } else {
+    stickySelfRank.style.display = 'block';
+  }
 }
 
 async function submitScore(pName, finalScore) {
@@ -1403,6 +1609,9 @@ async function loadLeaderboard() {
   if (!leaderboardList) return;
   
   leaderboardList.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
+  const stickySelfRank = document.getElementById('stickySelfRank');
+  if (stickySelfRank) stickySelfRank.style.display = 'none';
+  window.selfRank = null;
   
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=25`, {
@@ -1422,6 +1631,8 @@ async function loadLeaderboard() {
       return;
     }
     
+    const playerName = localStorage.getItem('cubex_playerName');
+    
     data.forEach((itemData, index) => {
       const rank = index + 1;
       let rankClass = '';
@@ -1429,8 +1640,16 @@ async function loadLeaderboard() {
       else if (rank === 2) rankClass = 'top-2';
       else if (rank === 3) rankClass = 'top-3';
       
+      const isSelf = itemData.name === playerName;
+      if (isSelf) {
+        rankClass += ' is-self';
+      }
+      
       const item = document.createElement('div');
       item.className = `lb-item ${rankClass}`;
+      if (isSelf) {
+        item.id = 'selfLeaderboardItem';
+      }
       item.innerHTML = `
         <span class="lb-rank">${rank}</span>
         <span class="lb-name">${itemData.name}</span>
@@ -1438,6 +1657,53 @@ async function loadLeaderboard() {
       `;
       leaderboardList.appendChild(item);
     });
+
+    // Kendi sıralamamızı veritabanından çekelim
+    if (playerName) {
+      try {
+        const selfRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(playerName)}&select=score`, {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        if (selfRes.ok) {
+          const selfData = await selfRes.json();
+          if (selfData && selfData.length > 0) {
+            const selfScore = selfData[0].score;
+            const countRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=gt.${selfScore}&select=count`, {
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Prefer': 'count=exact'
+              }
+            });
+            let selfRank = 1;
+            if (countRes.ok) {
+              const contentRange = countRes.headers.get('content-range');
+              if (contentRange) {
+                const countMatch = contentRange.match(/\/(\d+)/);
+                if (countMatch) {
+                  selfRank = parseInt(countMatch[1]) + 1;
+                }
+              }
+            }
+            
+            document.getElementById('selfRankNum').textContent = `#${selfRank}`;
+            document.getElementById('selfRankNameText').textContent = playerName;
+            document.getElementById('selfRankScoreText').textContent = `${selfScore} Puan`;
+            window.selfRank = selfRank;
+          }
+        }
+      } catch (selfErr) {
+        console.error(selfErr);
+      }
+    }
+    
+    // Scroll dinleyicisini ekle ve başlangıç durumunu ayarla
+    leaderboardList.removeEventListener('scroll', updateStickySelfRankVisibility);
+    leaderboardList.addEventListener('scroll', updateStickySelfRankVisibility);
+    updateStickySelfRankVisibility();
     
   } catch(e) {
     console.error(e);
@@ -1596,6 +1862,69 @@ if (adminDeleteScoreBtn) {
         alert("Ağ hatası.");
       }
       adminDeleteScoreBtn.innerHTML = '<i class="fas fa-trash"></i> Skoru Veritabanından Sil';
+    }
+  });
+}
+
+const adminCensorBtn = document.getElementById('adminCensorBtn');
+if (adminCensorBtn) {
+  adminCensorBtn.addEventListener('click', async () => {
+    sfxClick();
+    const badName = document.getElementById('adminCensorName').value.trim();
+    if (!badName) {
+      alert("Sansürlenecek ismi girmelisiniz.");
+      return;
+    }
+    
+    adminCensorBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sansürleniyor...';
+    try {
+      // 1. Veritabanından tüm isimleri çekip boştaki ilk OyuncuX sayısını bulalım
+      const listRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      
+      let x = 1;
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const names = listData.map(d => d.name);
+        const nums = [];
+        names.forEach(n => {
+          const m = n.match(/^Oyuncu(\d+)$/);
+          if (m) nums.push(parseInt(m[1]));
+        });
+        while (nums.includes(x)) {
+          x++;
+        }
+      }
+      
+      const newCensoredName = `Oyuncu${x}`;
+      
+      // 2. Veritabanındaki ismi güncelle (PATCH)
+      const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(badName)}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: newCensoredName })
+      });
+      
+      if (updateRes.ok) {
+        alert(`"${badName}" isimli oyuncunun adı başarıyla "${newCensoredName}" olarak sansürlendi.`);
+        document.getElementById('adminCensorName').value = '';
+        loadLeaderboard(); // Liderlik tablosunu yenile
+      } else {
+        alert("İsim sansürlenirken veritabanı hatası oluştu (İsim bulunamamış olabilir).");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Ağ hatası oluştu.");
+    } finally {
+      adminCensorBtn.innerHTML = '<i class="fas fa-ban"></i> İsmi \'Oyuncu[X]\' Yap';
     }
   });
 }

@@ -1243,3 +1243,114 @@ body::before {
   font-size: 14px;
   padding: 20px;
 }
+
+/* ==========================================================================
+   Real-Time Score Progress Bar & Sticky Self Rank Styles
+   ========================================================================== */
+
+.score-progress-container {
+  margin-top: 15px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.progress-label {
+  color: var(--text-muted, #94a3b8);
+  letter-spacing: 0.5px;
+}
+
+.progress-value {
+  color: var(--accent-blue, #4f8ef7);
+  font-weight: 700;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f8ef7, #a855f7);
+  border-radius: 10px;
+  width: 0%;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(79, 142, 247, 0.5);
+}
+
+/* Sticky self rank in leaderboard */
+.sticky-self-rank {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 12px;
+  box-sizing: border-box;
+}
+
+.divider-line {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0) 100%);
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.self-rank-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(79, 142, 247, 0.12);
+  border: 1px solid rgba(79, 142, 247, 0.3);
+  padding: 10px 14px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.self-rank-num {
+  font-weight: 900;
+  font-size: 15px;
+  color: #fbbf24;
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+}
+
+.self-rank-name {
+  flex: 1;
+  font-weight: 700;
+  color: white;
+  text-align: left;
+  font-size: 13px;
+}
+
+.self-rank-score {
+  font-weight: 800;
+  color: var(--accent-blue, #4f8ef7);
+  font-size: 14px;
+}
+
+/* Leaderboard Highlight for User */
+.lb-item.is-self {
+  background: rgba(79, 142, 247, 0.08);
+  border: 1.5px solid rgba(79, 142, 247, 0.25) !important;
+  box-shadow: 0 0 10px rgba(79, 142, 247, 0.1) inset;
+}
+
+.lb-item.is-self .lb-name {
+  color: #fbbf24 !important;
+  font-weight: 700;
+}

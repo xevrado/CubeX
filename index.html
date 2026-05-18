@@ -43,7 +43,9 @@
         <span class="app-title">CubeX</span>
       </div>
       <div class="header-right">
-
+        <button class="icon-btn" id="headerLeaderboardBtn" title="Liderlik Tablosu" aria-label="Liderlik Tablosu">
+          <i class="fas fa-trophy" style="color: #fbbf24;"></i>
+        </button>
         <button class="icon-btn" id="soundBtn" title="Ses" aria-label="Ses Aç/Kapat"><i
             class="fas fa-volume-up"></i></button>
         <button class="icon-btn" id="helpBtn" title="Yardım" aria-label="Yardım"><i
@@ -70,6 +72,17 @@
         <div class="stat-card">
           <div class="stat-label">COMBO</div>
           <div class="stat-value" id="comboCount">x1</div>
+        </div>
+      </div>
+
+      <!-- Real-time Score Progress -->
+      <div class="score-progress-container" id="scoreProgressContainer">
+        <div class="progress-info">
+          <span class="progress-label" id="progressLabel">Liderlik Tablosu Hedefi</span>
+          <span class="progress-value" id="progressValue">0 / 1000</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
         </div>
       </div>
     </section>
@@ -139,6 +152,16 @@
         <!-- JS ile doldurulacak -->
       </div>
 
+      <!-- Sticky Self Rank Container -->
+      <div class="sticky-self-rank" id="stickySelfRank" style="display: none;">
+        <div class="divider-line"></div>
+        <div class="self-rank-content">
+          <span class="self-rank-num" id="selfRankNum">#--</span>
+          <span class="self-rank-name">Sen: <span id="selfRankNameText">Oyuncu</span></span>
+          <span class="self-rank-score" id="selfRankScoreText">0 Puan</span>
+        </div>
+      </div>
+
       <button class="overlay-btn secondary-btn" id="closeLeaderboardBtn" style="margin-top: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
         <i class="fas fa-times"></i> Kapat
       </button>
@@ -203,15 +226,39 @@
   <div class="overlay" id="nameOverlay">
     <div class="overlay-card" style="max-width: 320px; text-align: center;">
       <div class="overlay-emoji"><i class="fas fa-medal" style="color: #fbbf24;"></i></div>
-      <h2 class="overlay-title">Yeni Rekor!</h2>
+      <h2 class="overlay-title">Oyuncu İsmi</h2>
       <p class="overlay-sub">Liderlik tablosu için ismini gir</p>
+      
+      <div class="warning-box" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 12px; line-height: 1.4; margin: 12px 0; text-align: left; box-sizing: border-box;">
+        <i class="fas fa-exclamation-triangle" style="margin-right: 4px; color: #ef4444;"></i>
+        <strong>Uyarı:</strong> Liderlik tablosuna girebilmek ve skorunuzun kaydedilmesi için en az <strong>1000 puan</strong> barajını geçmeniz gerekmektedir.
+      </div>
+
       <input type="text" id="playerNameInput" class="cheat-input" placeholder="Oyuncu Adı" maxlength="12" autocomplete="off" />
       <button class="overlay-btn primary-btn" id="saveNameBtn" style="margin-top: 18px;">
-        <i class="fas fa-paper-plane"></i> Gönder
+        <i class="fas fa-paper-plane"></i> Kaydet
       </button>
-      <button class="overlay-btn secondary-btn" id="skipNameBtn" style="margin-top: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
-        İstemiyorum
-      </button>
+    </div>
+  </div>
+
+  <!-- Censor/Rename Alert Overlay -->
+  <div class="overlay" id="censorRenameOverlay">
+    <div class="overlay-card" style="max-width: 340px; text-align: center;">
+      <div class="overlay-emoji"><i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i></div>
+      <h2 class="overlay-title">İsim Değişikliği</h2>
+      <p class="overlay-sub" style="font-size: 14px; margin-bottom: 15px; line-height: 1.5; color: #cbd5e1;">
+        Kurucu tarafından isminiz uygunsuz bulunduğu için <strong id="censoredOldName" style="color: #fca5a5;">OyuncuX</strong> olarak değiştirilmiştir. 
+        Yeni bir isim belirlemek ister misiniz, yoksa bu şekilde kalmasını mı tercih edersiniz?
+      </p>
+      <input type="text" id="newPlayerNameInput" class="cheat-input" placeholder="Yeni Oyuncu Adı" maxlength="12" autocomplete="off" style="margin-bottom: 12px;" />
+      <div style="display: flex; gap: 12px; margin-top: 15px;">
+        <button class="overlay-btn secondary-btn" id="censorKeepBtn" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); font-size: 13px;">
+          Böyle Kalsın
+        </button>
+        <button class="overlay-btn primary-btn" id="censorSaveBtn" style="flex:1; font-size: 13px;">
+          <i class="fas fa-check"></i> Değiştir
+        </button>
+      </div>
     </div>
   </div>
 
@@ -271,6 +318,14 @@
         <input type="text" id="adminDeleteName" class="cheat-input" placeholder="Silinecek İsim (Tam eşleşmeli)" />
         <button class="overlay-btn secondary-btn" id="adminDeleteScoreBtn" style="margin-top: 10px; width: 100%; background: #ef4444; color: white;">
           <i class="fas fa-trash"></i> Skoru Veritabanından Sil
+        </button>
+      </div>
+
+      <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); padding: 15px; border-radius: 12px; margin-top: 15px;">
+        <p style="font-size: 14px; color: #fde047; margin-bottom: 8px; font-weight: 600;">Oyuncu İsmini Sansürle</p>
+        <input type="text" id="adminCensorName" class="cheat-input" placeholder="Uygunsuz İsmi Girin" />
+        <button class="overlay-btn primary-btn" id="adminCensorBtn" style="margin-top: 10px; width: 100%; background: #f59e0b; color: white; border: none;">
+          <i class="fas fa-ban"></i> İsmi 'Oyuncu[X]' Yap
         </button>
       </div>
 
