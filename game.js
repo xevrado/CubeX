@@ -78,9 +78,6 @@ const SHAPES = [
   // ── Small T variants ──
   { cells: [[0,0],[0,1],[0,2],[1,0]], name: 'SmallT1' },
   { cells: [[0,0],[0,1],[0,2],[1,2]], name: 'SmallT2' },
-
-  // ── Thick bar ──
-  { cells: [[0,0],[0,1],[1,0],[1,1],[2,0],[2,1],[3,0],[3,1]], name: '4x2' },
 ];
 
 // ---- State ----
@@ -347,6 +344,11 @@ function generatePieces() {
     if (shape.cells.length >= minPreferredSize) {
       const bigChanceBoost = Math.min(0.5 + level * 0.2, 3.0);
       weight += bigChanceBoost;
+    }
+
+    // 2x3, 3x2, 3x3 ve Plus bloklarının gelme olasılığını azalt (%80 azaltım)
+    if (['2x3', '3x2', '3x3', 'Plus'].includes(shape.name)) {
+      weight *= 0.2;
     }
 
     return weight;
