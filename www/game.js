@@ -97,6 +97,7 @@ let highlightedCells = new Set(); // Sadece vurgulanan hücreleri tut (Performan
 let dragRafId = null;    // rAF id for drag optimization
 let clearingInProgress = false; // Satır temizleme animasyonu sırasında yerleştirmeyi engelle
 let gameActive = false;  // Aktif bir oyun var mı?
+let hasSubmittedThisGame = false; // Bu oyunda skor veritabanına başarıyla yüklendi mi?
 
 // ---- Audio (Web Audio API — tiny synth) ----
 let audioCtx = null;
@@ -593,8 +594,13 @@ function addScore(pts) {
   if (score >= 1000) {
     const pName = localStorage.getItem('cubex_playerName');
     if (pName) {
-      submitScore(pName, score, true); // true = silent background update
-      checkNameCensorship(); // Arka planda silinme/sansür durumunu denetle
+      // Önce sansür/silinme durumunu kontrol et, ardından skoru yükle
+      checkNameCensorship().then(() => {
+        const activeName = localStorage.getItem('cubex_playerName');
+        if (activeName && score >= 1000) {
+          submitScore(activeName, score, true); // true = silent background update
+        }
+      });
     } else {
       const nameOverlay = document.getElementById('nameOverlay');
       if (nameOverlay && !nameOverlay.classList.contains('active')) {
@@ -956,6 +962,7 @@ function newGame() {
   score = 0;
   level = 1;
   combo = 0;
+  hasSubmittedThisGame = false; // Yeni oyunda sıfırla
   scoreEl.textContent = '0';
   levelEl.textContent = '1';
   comboCountEl.textContent = 'x1';
@@ -1018,6 +1025,7 @@ function loadGameState() {
     combo = state.combo || 0;
     currentPieces = state.currentPieces || [];
     gameActive = true;
+    hasSubmittedThisGame = score >= 1000; // Yüklenen skora göre ata
     
     // Update UI
     scoreEl.textContent = score;
@@ -1451,6 +1459,7 @@ if (censorKeepBtn) {
   censorKeepBtn.addEventListener('click', () => {
     sfxClick();
     document.getElementById('censorRenameOverlay').classList.remove('active');
+    clearCensorNoteRow(); // Sansür notu satırını temizle
   });
 }
 
@@ -1492,6 +1501,7 @@ async function censorRenameScore(oldName, newName) {
       localStorage.setItem('cubex_playerName', newName);
       document.getElementById('censorRenameOverlay').classList.remove('active');
       alert(`İsminiz başarıyla "${newName}" olarak güncellendi!`);
+      clearCensorNoteRow(); // Sansür notu satırını temizle
       loadLeaderboard();
     } else {
       alert("İsim değiştirilemedi (Bu isim başkası tarafından kullanılıyor olabilir).");
@@ -1504,51 +1514,140 @@ async function censorRenameScore(oldName, newName) {
   }
 }
 
-async function checkNameCensorship() {
-  const localName = localStorage.getItem('cubex_playerName');
-  
-  if (!localName) return;
-  
-  if (/^Oyuncu\d+$/.test(localName)) {
-    showCensorPrompt(localName);
-    return;
-  }
-  
-  if (score < 1000) return;
-  
+async function checkAndShowCensorNote(censoredName) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(localName)}&select=score`, {
+    const censorNoteRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.censored:${encodeURIComponent(censoredName)}:%25&select=name`, {
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     });
     
-    if (res.ok) {
-      const data = await res.json();
-      if (data.length === 0) {
-        // Acaba silindi mi yoksa kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
-        const censorRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu*&select=name`, {
+    if (censorNoteRes.ok) {
+      const data = await censorNoteRes.json();
+      if (data && data.length > 0) {
+        const fullCensoredName = data[0].name;
+        const parts = fullCensoredName.split(':');
+        const note = parts.slice(2).join(':') || "";
+        
+        const noteTextEl = document.getElementById('censorNoteText');
+        if (noteTextEl && note) {
+          noteTextEl.textContent = `Kurucu Notu: "${note}"`;
+          noteTextEl.style.display = 'block';
+          // Not satırının adını elemente geçici olarak kaydedelim ki daha sonra silebilelim
+          noteTextEl.dataset.fullNoteName = fullCensoredName;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching censor note:", err);
+  }
+}
+
+async function clearCensorNoteRow() {
+  const noteTextEl = document.getElementById('censorNoteText');
+  if (noteTextEl && noteTextEl.dataset.fullNoteName) {
+    const fullNoteName = noteTextEl.dataset.fullNoteName;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(fullNoteName)}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      noteTextEl.dataset.fullNoteName = '';
+      noteTextEl.style.display = 'none';
+      noteTextEl.textContent = '';
+    } catch (e) {
+      console.error("Error deleting censor note row:", e);
+    }
+  }
+}
+
+async function checkNameCensorship() {
+  const localName = localStorage.getItem('cubex_playerName');
+  
+  if (!localName) return;
+  
+  if (/^Oyuncu\d+$/.test(localName)) {
+    await checkAndShowCensorNote(localName);
+    showCensorPrompt(localName);
+    return;
+  }
+  
+  try {
+    // Kurucu tarafından silinme notu bırakılmış mı kontrol et (Oyun başında veya oyun içinde)
+    const delNoteRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.deleted:${encodeURIComponent(localName)}:%25&select=name`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    
+    if (delNoteRes.ok) {
+      const delNoteData = await delNoteRes.json();
+      if (delNoteData && delNoteData.length > 0) {
+        const fullDeletedName = delNoteData[0].name;
+        const parts = fullDeletedName.split(':');
+        const note = parts.slice(2).join(':') || "Silinme notu bırakılmamış.";
+        
+        alert(`Skorunuz kurucu tarafından silindi!\nNot: ${note}\n\nOyununuz sıfırlanıyor...`);
+        
+        // Silinme notu satırını veritabanından temizle
+        await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(fullDeletedName)}`, {
+          method: 'DELETE',
           headers: {
             'apikey': SUPABASE_KEY,
             'Authorization': `Bearer ${SUPABASE_KEY}`
           }
         });
         
-        if (censorRes.ok) {
-          const censorData = await censorRes.json();
-          if (censorData && censorData.length > 0) {
-            // Kurucu ismi sansürleyip Oyuncu... yapmış!
-            const newName = censorData[0].name;
-            localStorage.setItem('cubex_playerName', newName);
-            showCensorPrompt(newName);
-            return;
-          }
+        // Yerel ismi ve skoru temizle, oyunu sıfırla
+        localStorage.removeItem('cubex_playerName');
+        localStorage.removeItem('cubex_lastSubmitted');
+        newGame();
+        return;
+      }
+    }
+    
+    // Oyun esnasında aktif skor gönderildikten sonra tablodan silinme kontrolü
+    if (score >= 1000 && hasSubmittedThisGame) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(localName)}&select=score`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
         }
-        
-        // Eğer her iki sorgudan da bir şey çıkmadıysa, kurucu skoru tamamen SİLMİŞTİR!
-        alert("Skorunuz kurucu tarafından silindi! Oyununuz sıfırlanıyor...");
-        newGame(); // Oyunu ve yerel kaydı tamamen sıfırla!
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.length === 0) {
+          // Kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
+          const censorRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu%25&select=name`, {
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+          });
+          
+          if (censorRes.ok) {
+            const censorData = await censorRes.json();
+            if (censorData && censorData.length > 0) {
+              const newName = censorData[0].name;
+              localStorage.setItem('cubex_playerName', newName);
+              await checkAndShowCensorNote(newName);
+              showCensorPrompt(newName);
+              return;
+            }
+          }
+          
+          // Silinme notu bulunamadıysa ama satır silindiyse varsayılan uyarıyı göster
+          alert("Skorunuz kurucu tarafından silindi! Oyununuz sıfırlanıyor...");
+          localStorage.removeItem('cubex_playerName');
+          localStorage.removeItem('cubex_lastSubmitted');
+          newGame();
+        }
       }
     }
   } catch (err) {
@@ -1638,6 +1737,7 @@ async function submitScore(pName, finalScore, silent = false) {
     if (res.ok) {
       localStorage.setItem('cubex_lastSubmitted', finalScore);
       console.log("Skor Supabase'e başarıyla kaydedildi.");
+      hasSubmittedThisGame = true; // Yükleme başarılı, işaretle
       return true;
     } else {
       const errText = await res.text();
@@ -1913,6 +2013,7 @@ if (adminDeleteScoreBtn) {
   adminDeleteScoreBtn.addEventListener('click', async () => {
     sfxClick();
     const nameInput = document.getElementById('adminDeleteName').value.trim();
+    const noteInput = document.getElementById('adminDeleteNote').value.trim();
     
     if (!nameInput) {
       alert("Silinecek ismi yazmalısın.");
@@ -1922,7 +2023,7 @@ if (adminDeleteScoreBtn) {
     if (confirm(`"${nameInput}" isimli oyuncunun skorunu kalıcı olarak silmek istediğine emin misin?`)) {
       adminDeleteScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Siliniyor...';
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${nameInput}`, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(nameInput)}`, {
           method: 'DELETE',
           headers: {
             'apikey': SUPABASE_KEY,
@@ -1930,8 +2031,24 @@ if (adminDeleteScoreBtn) {
           }
         });
         if (res.ok) {
-          alert(`Silme başarılı.`);
+          // Silme notunu veritabanına özel satır olarak ekle
+          const finalNote = noteInput || "Skorunuz kurucu tarafından silindi.";
+          const noteKey = `deleted:${nameInput}:${finalNote}`;
+          
+          await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify({ name: noteKey, score: -999 })
+          });
+          
+          alert(`Silme başarılı ve silinme notu kaydedildi.`);
           document.getElementById('adminDeleteName').value = '';
+          document.getElementById('adminDeleteNote').value = '';
         } else {
           alert("Silinirken bir hata oluştu.");
         }
@@ -1948,6 +2065,8 @@ if (adminCensorBtn) {
   adminCensorBtn.addEventListener('click', async () => {
     sfxClick();
     const badName = document.getElementById('adminCensorName').value.trim();
+    const noteInput = document.getElementById('adminCensorNote').value.trim();
+    
     if (!badName) {
       alert("Sansürlenecek ismi girmelisiniz.");
       return;
@@ -1991,8 +2110,24 @@ if (adminCensorBtn) {
       });
       
       if (updateRes.ok) {
-        alert(`"${badName}" isimli oyuncunun adı başarıyla "${newCensoredName}" olarak sansürlendi.`);
+        // Sansür notunu veritabanına özel satır olarak ekle
+        const finalNote = noteInput || "Uygunsuz isim kullanımı.";
+        const noteKey = `censored:${newCensoredName}:${finalNote}`;
+        
+        await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({ name: noteKey, score: -999 })
+        });
+        
+        alert(`"${badName}" isimli oyuncunun adı başarıyla "${newCensoredName}" olarak sansürlendi ve notu kaydedildi.`);
         document.getElementById('adminCensorName').value = '';
+        document.getElementById('adminCensorNote').value = '';
         loadLeaderboard(); // Liderlik tablosunu yenile
       } else {
         alert("İsim sansürlenirken veritabanı hatası oluştu (İsim bulunamamış olabilir).");

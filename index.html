@@ -251,6 +251,8 @@
         Kurucu tarafından isminiz uygunsuz bulunduğu için <strong id="censoredOldName" style="color: #fca5a5;">OyuncuX</strong> olarak değiştirilmiştir. 
         Yeni bir isim belirlemek ister misiniz, yoksa bu şekilde kalmasını mı tercih edersiniz?
       </p>
+      <!-- Creator Note Display -->
+      <p id="censorNoteText" style="font-size: 13px; color: #fde047; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); padding: 10px; border-radius: 8px; line-height: 1.4; margin: -5px 0 12px 0; text-align: left; box-sizing: border-box; display: none;"></p>
       <input type="text" id="newPlayerNameInput" class="cheat-input" placeholder="Yeni Oyuncu Adı" maxlength="12" autocomplete="off" style="margin-bottom: 12px;" />
       <div style="display: flex; gap: 12px; margin-top: 15px;">
         <button class="overlay-btn secondary-btn" id="censorKeepBtn" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); font-size: 13px;">
@@ -316,7 +318,8 @@
 
       <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 12px; margin-top: 15px;">
         <p style="font-size: 14px; color: #fca5a5; margin-bottom: 8px; font-weight: 600;">Oyuncu Sil</p>
-        <input type="text" id="adminDeleteName" class="cheat-input" placeholder="Silinecek İsim (Tam eşleşmeli)" />
+        <input type="text" id="adminDeleteName" class="cheat-input" placeholder="Silinecek İsim (Tam eşleşmeli)" style="margin-bottom: 8px;" />
+        <input type="text" id="adminDeleteNote" class="cheat-input" placeholder="Silme Nedeni / Not (İsteğe bağlı)" />
         <button class="overlay-btn secondary-btn" id="adminDeleteScoreBtn" style="margin-top: 10px; width: 100%; background: #ef4444; color: white;">
           <i class="fas fa-trash"></i> Skoru Veritabanından Sil
         </button>
@@ -324,7 +327,8 @@
 
       <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); padding: 15px; border-radius: 12px; margin-top: 15px;">
         <p style="font-size: 14px; color: #fde047; margin-bottom: 8px; font-weight: 600;">Oyuncu İsmini Sansürle</p>
-        <input type="text" id="adminCensorName" class="cheat-input" placeholder="Uygunsuz İsmi Girin" />
+        <input type="text" id="adminCensorName" class="cheat-input" placeholder="Uygunsuz İsmi Girin" style="margin-bottom: 8px;" />
+        <input type="text" id="adminCensorNote" class="cheat-input" placeholder="Sansür Nedeni / Not (İsteğe bağlı)" />
         <button class="overlay-btn primary-btn" id="adminCensorBtn" style="margin-top: 10px; width: 100%; background: #f59e0b; color: white; border: none;">
           <i class="fas fa-ban"></i> İsmi 'Oyuncu[X]' Yap
         </button>

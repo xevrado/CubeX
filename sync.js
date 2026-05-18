@@ -33,6 +33,27 @@ try {
   // 6. version.txt eski sistemler için güncelle
   fs.writeFileSync('./version.txt', version);
 
+  // 7. www klasörünü oluştur ve dosyaları kopyala (Cross-Platform Güvenli Kopyalama)
+  if (!fs.existsSync('./www')) {
+    fs.mkdirSync('./www');
+  }
+  const filesToCopy = [
+    'index.html',
+    'style.css',
+    'game.js',
+    'manifest.json',
+    'icon-192.png',
+    'icon-512.png',
+    'update.json',
+    'sw.js',
+    'version.txt'
+  ];
+  for (const file of filesToCopy) {
+    if (fs.existsSync(`./${file}`)) {
+      fs.copyFileSync(`./${file}`, `./www/${file}`);
+    }
+  }
+
   console.log("==== CUBEX BASARIYLA SENKRONIZE EDILDI ====");
   console.log("Yeni Surum: v" + version);
   console.log("Artik tum dosyalar (game.js, sw.js, index.html vb.) bu surume kilitlendi!");
