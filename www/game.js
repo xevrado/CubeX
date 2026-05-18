@@ -1679,7 +1679,7 @@ async function loadLeaderboard() {
   window.selfRank = null;
   
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=25`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=gte.1000&select=name,score&order=score.desc&limit=25`, {
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
