@@ -594,6 +594,7 @@ function addScore(pts) {
     const pName = localStorage.getItem('cubex_playerName');
     if (pName) {
       submitScore(pName, score, true); // true = silent background update
+      checkNameCensorship(); // Arka planda silinme/sansür durumunu denetle
     } else {
       const nameOverlay = document.getElementById('nameOverlay');
       if (nameOverlay && !nameOverlay.classList.contains('active')) {
@@ -1505,7 +1506,6 @@ async function censorRenameScore(oldName, newName) {
 
 async function checkNameCensorship() {
   const localName = localStorage.getItem('cubex_playerName');
-  const localBest = parseInt(localStorage.getItem('cubex_best') || '0');
   
   if (!localName) return;
   
@@ -1514,7 +1514,7 @@ async function checkNameCensorship() {
     return;
   }
   
-  if (localBest < 1000) return;
+  if (score < 1000) return;
   
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(localName)}&select=score`, {
@@ -1527,7 +1527,8 @@ async function checkNameCensorship() {
     if (res.ok) {
       const data = await res.json();
       if (data.length === 0) {
-        const censorRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${localBest}&name=like.Oyuncu*&select=name`, {
+        // Acaba silindi mi yoksa kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
+        const censorRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu*&select=name`, {
           headers: {
             'apikey': SUPABASE_KEY,
             'Authorization': `Bearer ${SUPABASE_KEY}`
@@ -1537,15 +1538,21 @@ async function checkNameCensorship() {
         if (censorRes.ok) {
           const censorData = await censorRes.json();
           if (censorData && censorData.length > 0) {
+            // Kurucu ismi sansürleyip Oyuncu... yapmış!
             const newName = censorData[0].name;
             localStorage.setItem('cubex_playerName', newName);
             showCensorPrompt(newName);
+            return;
           }
         }
+        
+        // Eğer her iki sorgudan da bir şey çıkmadıysa, kurucu skoru tamamen SİLMİŞTİR!
+        alert("Skorunuz kurucu tarafından silindi! Oyununuz sıfırlanıyor...");
+        newGame(); // Oyunu ve yerel kaydı tamamen sıfırla!
       }
     }
   } catch (err) {
-    console.error("Censorship check error:", err);
+    console.error("Censorship/Deletion check error:", err);
   }
 }
 
