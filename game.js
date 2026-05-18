@@ -1117,7 +1117,7 @@ window.addEventListener('resize', () => {
 });
 
 // ---- Custom Confirm Dialog ----
-function showConfirm(message, onYes, onNo) {
+function showConfirm(message, onYes, onNo, yesText = "Evet", noText = "Hayır") {
   const overlay = document.getElementById('confirmOverlay');
   const msgEl = document.getElementById('confirmMessage');
   const yesBtn = document.getElementById('confirmYes');
@@ -1130,6 +1130,8 @@ function showConfirm(message, onYes, onNo) {
   }
   
   if (msgEl) msgEl.textContent = message;
+  yesBtn.innerHTML = `<i class="fas fa-check"></i> ${yesText}`;
+  noBtn.innerHTML = `<i class="fas fa-times"></i> ${noText}`;
   overlay.classList.add('active');
   
   // Eski listener'ları temizle
@@ -1423,15 +1425,24 @@ if (saveNameBtn && playerNameInput) {
         alert("Seçeceğiniz isim 'Oyuncu[Sayı]' formatında olamaz.");
         return;
       }
-      localStorage.setItem('cubex_playerName', pName);
-      nameOverlay.classList.remove('active');
       
-      // Real-time live submission
-      if (score >= 1000) {
-        submitScore(pName, score, true);
-      }
-      
-      checkNameCensorship();
+      showConfirm(
+        "Lütfen kullanıcı adınızda argo, küfür, aşağılayıcı ve ahlaka uygun olmayan diğer sözcükleri kullanmayın. Aksi takdirde hesabınız yasaklanabilir.",
+        () => {
+          localStorage.setItem('cubex_playerName', pName);
+          nameOverlay.classList.remove('active');
+          
+          // Real-time live submission
+          if (score >= 1000) {
+            submitScore(pName, score, true);
+          }
+          
+          checkNameCensorship();
+        },
+        null,
+        "Onayla",
+        "İptal"
+      );
     } else {
       alert("Lütfen geçerli bir isim girin.");
     }
@@ -1578,6 +1589,55 @@ async function checkNameCensorship() {
   }
   
   try {
+    // Engelli (Ban) kontrolü
+    const banRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.banned:${encodeURIComponent(localName)}:%25&select=name`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    
+    if (banRes.ok) {
+      const banData = await banRes.json();
+      if (banData && banData.length > 0) {
+        const banKey = banData[0].name;
+        const parts = banKey.split(':');
+        const expireVal = parts[2];
+        
+        let activeBan = false;
+        let banMessage = "";
+        
+        if (expireVal === 'forever') {
+          activeBan = true;
+          banMessage = "Kullanıcı adınız kurucu tarafından kalıcı olarak engellenmiştir! Liderlik tablosuna skor gönderemezsiniz.";
+        } else {
+          const expireTime = parseInt(expireVal || '0');
+          if (Date.now() < expireTime) {
+            activeBan = true;
+            const remainingDate = new Date(expireTime);
+            banMessage = `Kullanıcı adınız kurucu tarafından engellenmiştir!\nEngelleme Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
+          } else {
+            // Ban süresi dolmuş, veritabanındaki ban satırını silelim
+            await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
+              method: 'DELETE',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+              }
+            });
+          }
+        }
+        
+        if (activeBan) {
+          alert(banMessage);
+          localStorage.removeItem('cubex_playerName');
+          localStorage.removeItem('cubex_lastSubmitted');
+          newGame();
+          return;
+        }
+      }
+    }
+
     // Kurucu tarafından silinme notu bırakılmış mı kontrol et (Oyun başında veya oyun içinde)
     const delNoteRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.deleted:${encodeURIComponent(localName)}:%25&select=name`, {
       headers: {
@@ -1724,6 +1784,55 @@ function updateStickySelfRankVisibility() {
 
 async function submitScore(pName, finalScore, silent = false) {
   try {
+    // Engelli (Ban) kontrolü - Çift Katman Güvenlik (Fail-Safe)
+    const banRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.banned:${encodeURIComponent(pName)}:%25&select=name`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    
+    if (banRes.ok) {
+      const banData = await banRes.json();
+      if (banData && banData.length > 0) {
+        const banKey = banData[0].name;
+        const parts = banKey.split(':');
+        const expireVal = parts[2];
+        
+        let activeBan = false;
+        let banMessage = "";
+        
+        if (expireVal === 'forever') {
+          activeBan = true;
+          banMessage = "Liderlik tablosuna girişiniz kurucu tarafından kalıcı olarak engellenmiştir!";
+        } else {
+          const expireTime = parseInt(expireVal || '0');
+          if (Date.now() < expireTime) {
+            activeBan = true;
+            const remainingDate = new Date(expireTime);
+            banMessage = `Liderlik tablosuna girişiniz kurucu tarafından engellenmiştir!\nBan Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
+          } else {
+            // Ban süresi dolmuş, veritabanındaki ban satırını silelim
+            await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
+              method: 'DELETE',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+              }
+            });
+          }
+        }
+        
+        if (activeBan) {
+          if (!silent) alert(banMessage);
+          localStorage.removeItem('cubex_playerName');
+          localStorage.removeItem('cubex_lastSubmitted');
+          newGame();
+          return false;
+        }
+      }
+    }
+
     const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
       method: 'POST',
       headers: {
@@ -2138,6 +2247,77 @@ if (adminCensorBtn) {
       alert("Ağ hatası oluştu.");
     } finally {
       adminCensorBtn.innerHTML = '<i class="fas fa-ban"></i> İsmi \'Oyuncu[X]\' Yap';
+    }
+  });
+}
+
+const adminBanBtn = document.getElementById('adminBanBtn');
+if (adminBanBtn) {
+  adminBanBtn.addEventListener('click', async () => {
+    sfxClick();
+    const banName = document.getElementById('adminBanName').value.trim();
+    const duration = document.getElementById('adminBanDuration').value;
+    
+    if (!banName) {
+      alert("Engellenecek oyuncu ismini girmelisiniz.");
+      return;
+    }
+    
+    let confirmMsg = `"${banName}" isimli oyuncuyu `;
+    if (duration === 'forever') {
+      confirmMsg += "kalıcı (süresiz) olarak";
+    } else {
+      confirmMsg += `${duration} gün boyunca`;
+    }
+    confirmMsg += " engellemek istediğinize emin misiniz?";
+    
+    if (confirm(confirmMsg)) {
+      adminBanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Engelleniyor...';
+      try {
+        // 1. Önce veritabanındaki aktif skorunu sil
+        await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banName)}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        
+        // 2. Ban bitiş süresini hesapla
+        let expireTime;
+        if (duration === 'forever') {
+          expireTime = 'forever';
+        } else {
+          const days = parseInt(duration);
+          expireTime = Date.now() + days * 24 * 60 * 60 * 1000;
+        }
+        
+        // 3. Ban kaydını özel satır olarak veritabanına ekle
+        const banKey = `banned:${banName}:${expireTime}`;
+        const banRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({ name: banKey, score: -999 })
+        });
+        
+        if (banRes.ok) {
+          alert(`"${banName}" isimli oyuncu başarıyla engellendi (banlandı) ve skoru silindi.`);
+          document.getElementById('adminBanName').value = '';
+          loadLeaderboard(); // Liderlik tablosunu yenile
+        } else {
+          alert("Engelleme kaydedilirken veritabanı hatası oluştu.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Ağ hatası oluştu.");
+      } finally {
+        adminBanBtn.innerHTML = '<i class="fas fa-gavel"></i> Oyuncuyu Engelle (Banla)';
+      }
     }
   });
 }
