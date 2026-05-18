@@ -1249,13 +1249,13 @@ body::before {
    ========================================================================== */
 
 .score-progress-container {
-  margin-top: 15px;
+  margin: 12px auto 0 auto;
   background: rgba(15, 23, 42, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 10px 14px;
   box-sizing: border-box;
-  width: 100%;
+  width: min(calc(100vw - 50px), 376px); /* Align with score section and board */
 }
 
 .progress-info {
