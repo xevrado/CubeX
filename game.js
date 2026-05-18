@@ -1170,7 +1170,38 @@ function renderVersionDisplay() {
   vEl.textContent = "v" + APP_VERSION;
 }
 
-function initApp() {
+async function checkMaintenance() {
+  try {
+    const res = await fetch(`update.json?t=${Date.now()}`); // Bypass SW cache using timestamp
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.maintenance === true) {
+        const overlay = document.getElementById('maintenanceOverlay');
+        const msgText = document.getElementById('maintenanceMessageText');
+        const timeText = document.getElementById('maintenanceEndTimeText');
+        
+        if (msgText && data.maintenanceMessage) {
+          msgText.textContent = data.maintenanceMessage;
+        }
+        if (timeText && data.maintenanceEndTime) {
+          timeText.textContent = data.maintenanceEndTime;
+        }
+        if (overlay) {
+          overlay.classList.add('active');
+        }
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error("Bakım kontrolü hatası:", err);
+  }
+  return false;
+}
+
+async function initApp() {
+  const isMaintenance = await checkMaintenance();
+  if (isMaintenance) return;
+
   renderVersionDisplay();
 
   createParticles();

@@ -1354,3 +1354,84 @@ body::before {
   color: #fbbf24 !important;
   font-weight: 700;
 }
+
+/* ---- Maintenance Overlay ---- */
+#maintenanceOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.99));
+  z-index: 10000; /* Over everything */
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: opacity 0.4s ease;
+  opacity: 0;
+}
+
+#maintenanceOverlay.active {
+  display: flex;
+  opacity: 1;
+}
+
+.maintenance-card {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.1);
+  padding: 30px;
+  border-radius: 20px;
+  text-align: center;
+  max-width: 380px;
+  width: min(calc(100vw - 40px), 380px);
+  box-sizing: border-box;
+  animation: floatCard 4s ease-in-out infinite;
+}
+
+.maintenance-icon {
+  font-size: 54px;
+  color: #f59e0b;
+  margin-bottom: 20px;
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+.maintenance-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #fff, #fde047);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.maintenance-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin-bottom: 20px;
+}
+
+.maintenance-badge {
+  display: inline-block;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #fde047;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+@keyframes floatCard {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
