@@ -588,6 +588,21 @@ function addScore(pts) {
   
   // Real-time progress bar'ı güncelle
   updateScoreProgress();
+
+  // Real-time Supabase güncellemesi (eğer 1000 puan geçildiyse)
+  if (score >= 1000) {
+    const pName = localStorage.getItem('cubex_playerName');
+    if (pName) {
+      submitScore(pName, score, true); // true = silent background update
+    } else {
+      const nameOverlay = document.getElementById('nameOverlay');
+      if (nameOverlay && !nameOverlay.classList.contains('active')) {
+        nameOverlay.classList.add('active');
+        const nameOverlaySub = document.querySelector('#nameOverlay .overlay-sub');
+        if (nameOverlaySub) nameOverlaySub.textContent = `1000 Puan Barajını Geçtin! Liderlik tablosu için ismini gir.`;
+      }
+    }
+  }
 }
 
 function showScorePopup(pts) {
@@ -920,24 +935,13 @@ function gameOver() {
     if (subEl) subEl.textContent = "Yerleştirecek yer kalmadı";
     clearGameState();
     
-    // Eğer 1000 puan barajı geçildiyse ve son gönderilen skordan büyükse leaderboard'a gönderilmeyi denesin
-    const lastSubmitted = parseInt(localStorage.getItem('cubex_lastSubmitted') || '0');
-    if (score >= 1000 && score > lastSubmitted) {
-      let pName = localStorage.getItem('cubex_playerName');
-      if (!pName) {
-        // İsim yoksa sor
-        document.getElementById('nameOverlay').classList.add('active');
-        // Oyuncuya skoru hatırlat
-        const nameOverlaySub = document.querySelector('#nameOverlay .overlay-sub');
-        if (nameOverlaySub) nameOverlaySub.textContent = `Skorun: ${score} - Liderlik tablosu için ismini gir`;
-      } else {
-        // İsim varsa direkt gönder
-        submitScore(pName, score);
-        gameOverOverlay.classList.add('active');
-      }
-    } else {
-      gameOverOverlay.classList.add('active');
+    // Yenilindiği için oyuncunun aktif skoru liderlik tablosundan silinir!
+    const pName = localStorage.getItem('cubex_playerName');
+    if (pName) {
+      deleteActiveScore(pName);
     }
+    
+    gameOverOverlay.classList.add('active');
   }
 }
 
@@ -965,6 +969,12 @@ function newGame() {
   renderTray();
   gameActive = true;
   updateScoreProgress();
+
+  const pName = localStorage.getItem('cubex_playerName');
+  if (pName) {
+    deleteActiveScore(pName);
+  }
+
   saveGameState();
 }
 
@@ -1021,6 +1031,7 @@ function loadGameState() {
     board = state.board;
     renderBoard();
     renderTray();
+    updateScoreProgress();
     
     return true;
   } catch (e) {
@@ -1405,10 +1416,9 @@ if (saveNameBtn && playerNameInput) {
       localStorage.setItem('cubex_playerName', pName);
       nameOverlay.classList.remove('active');
       
-      // Eğer game over flow içindeyse skoru gönder
-      if (gameOverOverlay && !gameOverOverlay.classList.contains('active') && score >= 1000) {
-        submitScore(pName, score);
-        gameOverOverlay.classList.add('active');
+      // Real-time live submission
+      if (score >= 1000) {
+        submitScore(pName, score, true);
       }
       
       checkNameCensorship();
@@ -1605,7 +1615,7 @@ function updateStickySelfRankVisibility() {
   }
 }
 
-async function submitScore(pName, finalScore) {
+async function submitScore(pName, finalScore, silent = false) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
       method: 'POST',
@@ -1625,13 +1635,31 @@ async function submitScore(pName, finalScore) {
     } else {
       const errText = await res.text();
       console.error("Supabase Hatası:", errText);
-      alert("Veritabanı Hatası: " + errText);
+      if (!silent) alert("Veritabanı Hatası: " + errText);
       return false;
     }
   } catch(e) {
     console.error("Skor yüklenemedi", e);
-    alert("Bağlantı hatası: " + e.message);
+    if (!silent) alert("Bağlantı hatası: " + e.message);
     return false;
+  }
+}
+
+async function deleteActiveScore(pName) {
+  if (!pName) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    if (res.ok) {
+      console.log(`"${pName}" adlı oyuncunun aktif skoru veritabanından silindi.`);
+    }
+  } catch(e) {
+    console.error("Skor silinirken hata oluştu:", e);
   }
 }
 
