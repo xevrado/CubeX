@@ -1177,115 +1177,130 @@ function renderVersionDisplay() {
   vEl.textContent = "v" + APP_VERSION;
 }
 
-async function checkMaintenance() {
-  try {
-    const res = await fetch(`update.json?t=${Date.now()}`); // Bypass SW cache using timestamp
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.maintenance === true) {
-        maintenanceActiveAtStart = true;
-        const overlay = document.getElementById('maintenanceOverlay');
-        const msgText = document.getElementById('maintenanceMessageText');
-        const timeText = document.getElementById('maintenanceEndTimeText');
-        
-        if (msgText && data.maintenanceMessage) {
-          msgText.textContent = data.maintenanceMessage;
-        }
-        if (timeText && data.maintenanceEndTime) {
-          timeText.textContent = data.maintenanceEndTime;
-        }
-        if (overlay) {
-          overlay.classList.add('active');
-        }
-        return true;
+function checkMaintenance() {
+  return fetch(`update.json?t=${Date.now()}`) // Bypass SW cache using timestamp
+    .then(res => {
+      if (res.ok) {
+        return res.json().then(data => {
+          if (data && data.maintenance === true) {
+            maintenanceActiveAtStart = true;
+            const overlay = document.getElementById('maintenanceOverlay');
+            const msgText = document.getElementById('maintenanceMessageText');
+            const timeText = document.getElementById('maintenanceEndTimeText');
+            
+            if (msgText && data.maintenanceMessage) {
+              msgText.textContent = data.maintenanceMessage;
+            }
+            if (timeText && data.maintenanceEndTime) {
+              timeText.textContent = data.maintenanceEndTime;
+            }
+            if (overlay) {
+              overlay.classList.add('active');
+            }
+            return true;
+          }
+          return false;
+        });
       }
-    }
-  } catch (err) {
-    console.error("Bakım kontrolü hatası:", err);
-  }
-  return false;
+      return false;
+    })
+    .catch(err => {
+      console.error("Bakım kontrolü hatası:", err);
+      return false;
+    });
 }
 
-async function initApp() {
-  await checkMaintenance();
-  renderVersionDisplay();
+function initApp() {
+  checkMaintenance().then(() => {
+    renderVersionDisplay();
 
-  createParticles();
-  
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const mainMenuOverlay = document.getElementById('mainMenuOverlay');
-  const startBtn = document.getElementById('startBtn');
-  const resumeBtn = document.getElementById('resumeBtn');
-  const menuBestDisplay = document.getElementById('menuBestDisplay');
+    createParticles();
+    
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const downloadBtn = document.getElementById('downloadBtn');
+    const mainMenuOverlay = document.getElementById('mainMenuOverlay');
+    const startBtn = document.getElementById('startBtn');
+    const resumeBtn = document.getElementById('resumeBtn');
+    const menuBestDisplay = document.getElementById('menuBestDisplay');
 
-  // Load best score for menu
-  bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
-  if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
+    // Load best score for menu
+    bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
+    if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
 
-  // Kaydedilmiş oyun var mı kontrol et
-  const hasSavedGame = !!localStorage.getItem('cubex_gameState');
-  if (hasSavedGame) {
-    try {
-      const saved = JSON.parse(localStorage.getItem('cubex_gameState'));
-      if (saved && saved.gameActive) gameActive = true;
-    } catch(e) {}
-  }
-  
-  updateMenuButtons();
+    // Kaydedilmiş oyun var mı kontrol et
+    const hasSavedGame = !!localStorage.getItem('cubex_gameState');
+    if (hasSavedGame) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('cubex_gameState'));
+        if (saved && saved.gameActive) gameActive = true;
+      } catch(e) {}
+    }
+    
+    updateMenuButtons();
 
-  // "Yeni Oyun" butonu — aktif oyun varsa onay sor
-  if (startBtn) {
-    startBtn.addEventListener('click', () => {
-      initAudio();
-      sfxClick();
-      if (gameActive) {
-        showConfirm('Mevcut oyun silinecek. Yeni oyun başlatmak istiyor musun?', () => {
+    // "Yeni Oyun" butonu — aktif oyun varsa onay sor
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        initAudio();
+        sfxClick();
+        if (gameActive) {
+          showConfirm('Mevcut oyun silinecek. Yeni oyun başlatmak istiyor musun?', () => {
+            mainMenuOverlay.classList.remove('active');
+            newGame();
+          });
+        } else {
           mainMenuOverlay.classList.remove('active');
           newGame();
-        });
-      } else {
+        }
+      });
+    }
+
+    // "Devam Et" butonu — kaydedilmiş oyunu yükler
+    if (resumeBtn) {
+      resumeBtn.addEventListener('click', () => {
+        initAudio();
+        sfxClick();
         mainMenuOverlay.classList.remove('active');
-        newGame();
-      }
-    });
-  }
+        const loaded = loadGameState();
+        if (!loaded) {
+          // Kayıt bozuksa yeni oyun başlat
+          newGame();
+        }
+      });
+    }
 
-  // "Devam Et" butonu — kaydedilmiş oyunu yükler
-  if (resumeBtn) {
-    resumeBtn.addEventListener('click', () => {
-      initAudio();
-      sfxClick();
-      mainMenuOverlay.classList.remove('active');
-      const loaded = loadGameState();
-      if (!loaded) {
-        // Kayıt bozuksa yeni oyun başlat
-        newGame();
-      }
-    });
-  }
+    // Liderlik tablosu puan ilerlemesini ilk defa güncelle
+    updateScoreProgress();
 
-
-
-  // Liderlik tablosu puan ilerlemesini ilk defa güncelle
-  updateScoreProgress();
-
-  // Oyuna girince isim kontrolü yap
-  const localName = localStorage.getItem('cubex_playerName');
-  const nameOverlay = document.getElementById('nameOverlay');
-  if (!localName) {
-    if (nameOverlay) nameOverlay.classList.add('active');
-  } else {
-    checkNameCensorship();
-  }
-
-  // Her 20 saniyede bir sansür/silinme durumunu arka planda kontrol et (Yarış durumlarını tamamen önler)
-  setInterval(() => {
-    if (gameActive && score >= 1000) {
+    // Oyuna girince isim kontrolü yap
+    const localName = localStorage.getItem('cubex_playerName');
+    const nameOverlay = document.getElementById('nameOverlay');
+    if (!localName) {
+      if (nameOverlay) nameOverlay.classList.add('active');
+    } else {
       checkNameCensorship();
     }
-  }, 20000);
 
-  initIOSInstallPrompt();
+    // Her 20 saniyede bir sansür/silinme durumunu arka planda kontrol et (Yarış durumlarını tamamen önler)
+    setInterval(() => {
+      if (gameActive && score >= 1000) {
+        checkNameCensorship();
+      }
+    }, 20000);
+
+    // iOS'da İndir butonunu gizle (APK çalışmayacağı için)
+    if (isIOS) {
+      if (downloadBtn) downloadBtn.style.display = 'none';
+    }
+
+    // Güncelleme ve Bakım kontrolünü tüm platformlar için yap (Android APK içindeyken butonu gizle)
+    if (navigator.onLine) {
+      const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
+      if (isAndroid && downloadBtn) downloadBtn.style.display = 'none';
+    }
+
+    initIOSInstallPrompt();
+  });
 }
 
 function initIOSInstallPrompt() {
@@ -2173,7 +2188,7 @@ if (adminCloseBtn) {
 }
 
 if (adminAddScoreBtn) {
-  adminAddScoreBtn.addEventListener('click', async () => {
+  adminAddScoreBtn.addEventListener('click', () => {
     sfxClick();
     const nameInput = document.getElementById('adminScoreName').value.trim();
     const valInput = parseInt(document.getElementById('adminScoreValue').value);
@@ -2184,16 +2199,17 @@ if (adminAddScoreBtn) {
     }
     
     adminAddScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
-    const success = await submitScore(nameInput, valInput);
-    adminAddScoreBtn.innerHTML = '<i class="fas fa-upload"></i> Skoru Yükle';
-    if (success) {
-      alert(`${nameInput} adlı oyuncuya ${valInput} puan eklendi/güncellendi.`);
-    }
+    submitScore(nameInput, valInput).then(success => {
+      adminAddScoreBtn.innerHTML = '<i class="fas fa-upload"></i> Skoru Yükle';
+      if (success) {
+        alert(`${nameInput} adlı oyuncuya ${valInput} puan eklendi/güncellendi.`);
+      }
+    });
   });
 }
 
 if (adminDeleteScoreBtn) {
-  adminDeleteScoreBtn.addEventListener('click', async () => {
+  adminDeleteScoreBtn.addEventListener('click', () => {
     sfxClick();
     const nameInput = document.getElementById('adminDeleteName').value.trim();
     const noteInput = document.getElementById('adminDeleteNote').value.trim();
@@ -2205,20 +2221,20 @@ if (adminDeleteScoreBtn) {
     
     if (confirm(`"${nameInput}" isimli oyuncunun skorunu kalıcı olarak silmek istediğine emin misin?`)) {
       adminDeleteScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Siliniyor...';
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(nameInput)}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
-        });
+      fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(nameInput)}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      })
+      .then(res => {
         if (res.ok) {
           // Silme notunu veritabanına özel satır olarak ekle
           const finalNote = noteInput || "Skorunuz kurucu tarafından silindi.";
           const noteKey = `deleted:${nameInput}:${finalNote}`;
           
-          await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+          return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
             method: 'POST',
             headers: {
               'apikey': SUPABASE_KEY,
@@ -2227,25 +2243,28 @@ if (adminDeleteScoreBtn) {
               'Prefer': 'resolution=merge-duplicates'
             },
             body: JSON.stringify({ name: noteKey, score: -999 })
+          }).then(() => {
+            alert(`Silme başarılı ve silinme notu kaydedildi.`);
+            document.getElementById('adminDeleteName').value = '';
+            document.getElementById('adminDeleteNote').value = '';
           });
-          
-          alert(`Silme başarılı ve silinme notu kaydedildi.`);
-          document.getElementById('adminDeleteName').value = '';
-          document.getElementById('adminDeleteNote').value = '';
         } else {
           alert("Silinirken bir hata oluştu.");
         }
-      } catch(e) {
+      })
+      .catch(() => {
         alert("Ağ hatası.");
-      }
-      adminDeleteScoreBtn.innerHTML = '<i class="fas fa-trash"></i> Skoru Veritabanından Sil';
+      })
+      .then(() => {
+        adminDeleteScoreBtn.innerHTML = '<i class="fas fa-trash"></i> Skoru Veritabanından Sil';
+      });
     }
   });
 }
 
 const adminCensorBtn = document.getElementById('adminCensorBtn');
 if (adminCensorBtn) {
-  adminCensorBtn.addEventListener('click', async () => {
+  adminCensorBtn.addEventListener('click', () => {
     sfxClick();
     const badName = document.getElementById('adminCensorName').value.trim();
     const noteInput = document.getElementById('adminCensorNote').value.trim();
@@ -2256,33 +2275,36 @@ if (adminCensorBtn) {
     }
     
     adminCensorBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sansürleniyor...';
-    try {
-      // 1. Veritabanından tüm isimleri çekip boştaki ilk OyuncuX sayısını bulalım
-      const listRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name`, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-      
-      let x = 1;
+    
+    // 1. Veritabanından tüm isimleri çekip boştaki ilk OyuncuX sayısını bulalım
+    fetch(`${SUPABASE_URL}/rest/v1/scores?select=name`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    })
+    .then(listRes => {
       if (listRes.ok) {
-        const listData = await listRes.json();
-        const names = listData.map(d => d.name);
-        const nums = [];
-        names.forEach(n => {
-          const m = n.match(/^Oyuncu(\d+)$/);
-          if (m) nums.push(parseInt(m[1]));
-        });
-        while (nums.includes(x)) {
-          x++;
-        }
+        return listRes.json();
+      }
+      throw new Error("Liderlik tablosu listesi alınamadı");
+    })
+    .then(listData => {
+      let x = 1;
+      const names = listData.map(d => d.name);
+      const nums = [];
+      names.forEach(n => {
+        const m = n.match(/^Oyuncu(\d+)$/);
+        if (m) nums.push(parseInt(m[1]));
+      });
+      while (nums.includes(x)) {
+        x++;
       }
       
       const newCensoredName = `Oyuncu${x}`;
       
       // 2. Veritabanındaki ismi güncelle (PATCH)
-      const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(badName)}`, {
+      return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(badName)}`, {
         method: 'PATCH',
         headers: {
           'apikey': SUPABASE_KEY,
@@ -2290,43 +2312,45 @@ if (adminCensorBtn) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ name: newCensoredName })
+      }).then(updateRes => {
+        if (updateRes.ok) {
+          // Sansür notunu veritabanına özel satır olarak ekle
+          const finalNote = noteInput || "Uygunsuz isim kullanımı.";
+          const noteKey = `censored:${newCensoredName}:${finalNote}`;
+          
+          return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify({ name: noteKey, score: -999 })
+          }).then(() => {
+            alert(`"${badName}" isimli oyuncunun adı başarıyla "${newCensoredName}" olarak sansürlendi ve notu kaydedildi.`);
+            document.getElementById('adminCensorName').value = '';
+            document.getElementById('adminCensorNote').value = '';
+            loadLeaderboard(); // Liderlik tablosunu yenile
+          });
+        } else {
+          alert("İsim sansürlenirken veritabanı hatası oluştu (İsim bulunamamış olabilir).");
+        }
       });
-      
-      if (updateRes.ok) {
-        // Sansür notunu veritabanına özel satır olarak ekle
-        const finalNote = noteInput || "Uygunsuz isim kullanımı.";
-        const noteKey = `censored:${newCensoredName}:${finalNote}`;
-        
-        await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify({ name: noteKey, score: -999 })
-        });
-        
-        alert(`"${badName}" isimli oyuncunun adı başarıyla "${newCensoredName}" olarak sansürlendi ve notu kaydedildi.`);
-        document.getElementById('adminCensorName').value = '';
-        document.getElementById('adminCensorNote').value = '';
-        loadLeaderboard(); // Liderlik tablosunu yenile
-      } else {
-        alert("İsim sansürlenirken veritabanı hatası oluştu (İsim bulunamamış olabilir).");
-      }
-    } catch (err) {
+    })
+    .catch(err => {
       console.error(err);
-      alert("Ağ hatası oluştu.");
-    } finally {
+      alert("Ağ veya veritabanı hatası oluştu.");
+    })
+    .then(() => {
       adminCensorBtn.innerHTML = '<i class="fas fa-ban"></i> İsmi \'Oyuncu[X]\' Yap';
-    }
+    });
   });
 }
 
 const adminBanBtn = document.getElementById('adminBanBtn');
 if (adminBanBtn) {
-  adminBanBtn.addEventListener('click', async () => {
+  adminBanBtn.addEventListener('click', () => {
     sfxClick();
     const banName = document.getElementById('adminBanName').value.trim();
     const duration = document.getElementById('adminBanDuration').value;
@@ -2346,16 +2370,16 @@ if (adminBanBtn) {
     
     if (confirm(confirmMsg)) {
       adminBanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Engelleniyor...';
-      try {
-        // 1. Önce veritabanındaki aktif skorunu sil
-        await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banName)}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
-        });
-        
+      
+      // 1. Önce veritabanındaki aktif skorunu sil
+      fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banName)}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      })
+      .then(() => {
         // 2. Ban bitiş süresini hesapla
         let expireTime;
         if (duration === 'forever') {
@@ -2367,7 +2391,7 @@ if (adminBanBtn) {
         
         // 3. Ban kaydını özel satır olarak veritabanına ekle
         const banKey = `banned:${banName}:${expireTime}`;
-        const banRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+        return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
           method: 'POST',
           headers: {
             'apikey': SUPABASE_KEY,
@@ -2377,7 +2401,8 @@ if (adminBanBtn) {
           },
           body: JSON.stringify({ name: banKey, score: -999 })
         });
-        
+      })
+      .then(banRes => {
         if (banRes.ok) {
           alert(`"${banName}" isimli oyuncu başarıyla engellendi (banlandı) ve skoru silindi.`);
           document.getElementById('adminBanName').value = '';
@@ -2385,12 +2410,14 @@ if (adminBanBtn) {
         } else {
           alert("Engelleme kaydedilirken veritabanı hatası oluştu.");
         }
-      } catch (err) {
+      })
+      .catch(err => {
         console.error(err);
         alert("Ağ hatası oluştu.");
-      } finally {
+      })
+      .then(() => {
         adminBanBtn.innerHTML = '<i class="fas fa-gavel"></i> Oyuncuyu Engelle (Banla)';
-      }
+      });
     }
   });
 }

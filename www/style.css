@@ -187,7 +187,95 @@ body::before {
   align-items: center;
 }
 
+/* ---- Download Button with Rotating Light ---- */
+.download-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 2px;
+  border-radius: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+  z-index: 10;
+  box-sizing: border-box;
+}
 
+.download-btn:hover {
+  transform: scale(1.05);
+}
+
+.download-btn-border {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    #1e3a8a, /* Koyu Lacivert */
+    #4c1d95, /* Koyu Mor */
+    #1e1b4b, /* Gece Mavisi */
+    #312e81, /* İndigo */
+    #1e3a8a
+  );
+  animation: rotateTransform 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotateTransform {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.download-btn-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px; /* Border payı ile beraber toplam 38px olması için */
+  padding: 0 16px;
+  border-radius: 12px;
+  background: #0a0a1a;
+  color: #ffffff; /* Saf Beyaz */
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.download-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    rgba(30, 58, 138, 0.3),
+    rgba(76, 29, 149, 0.3),
+    rgba(30, 27, 75, 0.3),
+    rgba(49, 46, 129, 0.3),
+    rgba(30, 58, 138, 0.3)
+  );
+  filter: blur(6px);
+  z-index: -1;
+  animation: rotateTransform 3s linear infinite;
+  pointer-events: none;
+}
+
+.download-btn:active .download-btn-content {
+  background: rgba(20, 20, 40, 1);
+  transform: scale(0.96);
+}
 
 .icon-btn {
   width: 38px;
