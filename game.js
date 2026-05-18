@@ -938,12 +938,6 @@ function gameOver() {
     if (subEl) subEl.textContent = "Yerleştirecek yer kalmadı";
     clearGameState();
     
-    // Yenilindiği için oyuncunun aktif skoru liderlik tablosundan silinir!
-    const pName = localStorage.getItem('cubex_playerName');
-    if (pName) {
-      deleteActiveScore(pName);
-    }
-    
     gameOverOverlay.classList.add('active');
   }
 }
@@ -973,11 +967,6 @@ function newGame() {
   renderTray();
   gameActive = true;
   updateScoreProgress();
-
-  const pName = localStorage.getItem('cubex_playerName');
-  if (pName) {
-    deleteActiveScore(pName);
-  }
 
   saveGameState();
 }
@@ -1833,6 +1822,29 @@ async function submitScore(pName, finalScore, silent = false) {
           return false;
         }
       }
+    }
+
+    // Eğer yeni skor, veritabanındaki mevcut skorundan küçük veya eşitse, yüksek skoru ezip düşürmemek için yüklemeyi atla
+    try {
+      const currentRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}&select=score`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      if (currentRes.ok) {
+        const currentData = await currentRes.json();
+        if (currentData && currentData.length > 0) {
+          const existingScore = currentData[0].score;
+          if (finalScore <= existingScore) {
+            console.log(`Yeni skor (${finalScore}) mevcut yüksek skordan (${existingScore}) küçük veya eşit olduğu için yükleme atlandı.`);
+            hasSubmittedThisGame = true; // Zaten veritabanında daha iyi bir skoru var, işaretle
+            return true;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Mevcut en yüksek skor denetlenirken geçici bir hata oluştu:", e);
     }
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
