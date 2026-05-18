@@ -1476,236 +1476,269 @@ if (censorSaveBtn && newPlayerNameInput) {
   });
 }
 
-async function censorRenameScore(oldName, newName) {
+function censorRenameScore(oldName, newName) {
   const censorSaveBtn = document.getElementById('censorSaveBtn');
   if (!newName) {
     alert("Lütfen geçerli bir yeni isim girin.");
-    return;
+    return Promise.resolve(false);
   }
   
   if (/^Oyuncu\d+$/.test(newName)) {
     alert("Seçeceğiniz yeni isim 'Oyuncu[Sayı]' formatında olamaz.");
-    return;
+    return Promise.resolve(false);
   }
   
   if (censorSaveBtn) censorSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Güncelleniyor...';
   
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(oldName)}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name: newName })
-    });
-    
+  return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(oldName)}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name: newName })
+  })
+  .then(res => {
     if (res.ok) {
       localStorage.setItem('cubex_playerName', newName);
       document.getElementById('censorRenameOverlay').classList.remove('active');
       alert(`İsminiz başarıyla "${newName}" olarak güncellendi!`);
       clearCensorNoteRow(); // Sansür notu satırını temizle
       loadLeaderboard();
+      return true;
     } else {
       alert("İsim değiştirilemedi (Bu isim başkası tarafından kullanılıyor olabilir).");
+      return false;
     }
-  } catch (err) {
+  })
+  .catch(err => {
     console.error(err);
     alert("Ağ hatası oluştu.");
-  } finally {
+    return false;
+  })
+  .then(success => {
     if (censorSaveBtn) censorSaveBtn.innerHTML = '<i class="fas fa-check"></i> Değiştir';
-  }
+    return success;
+  });
 }
 
-async function checkAndShowCensorNote(censoredName) {
-  try {
-    const censorNoteRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.censored:${encodeURIComponent(censoredName)}:%25&select=name`, {
+function checkAndShowCensorNote(censoredName) {
+  return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.censored:${encodeURIComponent(censoredName)}:%25&select=name`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
+    }
+  })
+  .then(censorNoteRes => {
+    if (censorNoteRes.ok) {
+      return censorNoteRes.json().then(data => {
+        if (data && data.length > 0) {
+          const fullCensoredName = data[0].name;
+          const parts = fullCensoredName.split(':');
+          const note = parts.slice(2).join(':') || "";
+          
+          const noteTextEl = document.getElementById('censorNoteText');
+          if (noteTextEl && note) {
+            noteTextEl.textContent = `Kurucu Notu: "${note}"`;
+            noteTextEl.style.display = 'block';
+            // Not satırının adını elemente geçici olarak kaydedelim ki daha sonra silebilelim
+            noteTextEl.dataset.fullNoteName = fullCensoredName;
+          }
+        }
+      });
+    }
+  })
+  .catch(err => {
+    console.error("Error fetching censor note:", err);
+  });
+}
+
+function clearCensorNoteRow() {
+  const noteTextEl = document.getElementById('censorNoteText');
+  if (noteTextEl && noteTextEl.dataset.fullNoteName) {
+    const fullNoteName = noteTextEl.dataset.fullNoteName;
+    return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(fullNoteName)}`, {
+      method: 'DELETE',
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
-    });
-    
-    if (censorNoteRes.ok) {
-      const data = await censorNoteRes.json();
-      if (data && data.length > 0) {
-        const fullCensoredName = data[0].name;
-        const parts = fullCensoredName.split(':');
-        const note = parts.slice(2).join(':') || "";
-        
-        const noteTextEl = document.getElementById('censorNoteText');
-        if (noteTextEl && note) {
-          noteTextEl.textContent = `Kurucu Notu: "${note}"`;
-          noteTextEl.style.display = 'block';
-          // Not satırının adını elemente geçici olarak kaydedelim ki daha sonra silebilelim
-          noteTextEl.dataset.fullNoteName = fullCensoredName;
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Error fetching censor note:", err);
-  }
-}
-
-async function clearCensorNoteRow() {
-  const noteTextEl = document.getElementById('censorNoteText');
-  if (noteTextEl && noteTextEl.dataset.fullNoteName) {
-    const fullNoteName = noteTextEl.dataset.fullNoteName;
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(fullNoteName)}`, {
-        method: 'DELETE',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
+    })
+    .then(() => {
       noteTextEl.dataset.fullNoteName = '';
       noteTextEl.style.display = 'none';
       noteTextEl.textContent = '';
-    } catch (e) {
+    })
+    .catch(e => {
       console.error("Error deleting censor note row:", e);
-    }
+    });
   }
+  return Promise.resolve();
 }
 
-async function checkNameCensorship() {
+function checkNameCensorship() {
   const localName = localStorage.getItem('cubex_playerName');
   
   if (!localName) return;
   
   if (/^Oyuncu\d+$/.test(localName)) {
-    await checkAndShowCensorNote(localName);
-    showCensorPrompt(localName);
+    checkAndShowCensorNote(localName).then(() => {
+      showCensorPrompt(localName);
+    });
     return;
   }
   
-  try {
-    // Engelli (Ban) kontrolü
-    const banRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.banned:${encodeURIComponent(localName)}:%25&select=name`, {
+  fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.banned:${encodeURIComponent(localName)}:%25&select=name`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
+    }
+  })
+  .then(banRes => {
+    if (banRes.ok) {
+      return banRes.json().then(banData => {
+        if (banData && banData.length > 0) {
+          const banKey = banData[0].name;
+          const parts = banKey.split(':');
+          const expireVal = parts[2];
+          
+          let activeBan = false;
+          let banMessage = "";
+          
+          if (expireVal === 'forever') {
+            activeBan = true;
+            banMessage = "Kullanıcı adınız kurucu tarafından kalıcı olarak engellenmiştir! Liderlik tablosuna skor gönderemezsiniz.";
+          } else {
+            const expireTime = parseInt(expireVal || '0');
+            if (Date.now() < expireTime) {
+              activeBan = true;
+              const remainingDate = new Date(expireTime);
+              banMessage = `Kullanıcı adınız kurucu tarafından engellenmiştir!\nEngelleme Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
+            } else {
+              // Ban süresi dolmuş, veritabanındaki ban satırını silelim
+              fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
+                method: 'DELETE',
+                headers: {
+                  'apikey': SUPABASE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+              }).catch(e => console.error(e));
+            }
+          }
+          
+          if (activeBan) {
+            alert(banMessage);
+            localStorage.removeItem('cubex_playerName');
+            localStorage.removeItem('cubex_lastSubmitted');
+            newGame();
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+    return true;
+  })
+  .then(shouldContinue => {
+    if (!shouldContinue) return;
+    
+    // Kurucu tarafından silinme notu bırakılmış mı kontrol et (Oyun başında veya oyun içinde)
+    return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.deleted:${encodeURIComponent(localName)}:%25&select=name`, {
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
-    });
-    
-    if (banRes.ok) {
-      const banData = await banRes.json();
-      if (banData && banData.length > 0) {
-        const banKey = banData[0].name;
-        const parts = banKey.split(':');
-        const expireVal = parts[2];
-        
-        let activeBan = false;
-        let banMessage = "";
-        
-        if (expireVal === 'forever') {
-          activeBan = true;
-          banMessage = "Kullanıcı adınız kurucu tarafından kalıcı olarak engellenmiştir! Liderlik tablosuna skor gönderemezsiniz.";
-        } else {
-          const expireTime = parseInt(expireVal || '0');
-          if (Date.now() < expireTime) {
-            activeBan = true;
-            const remainingDate = new Date(expireTime);
-            banMessage = `Kullanıcı adınız kurucu tarafından engellenmiştir!\nEngelleme Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
-          } else {
-            // Ban süresi dolmuş, veritabanındaki ban satırını silelim
-            await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
+    })
+    .then(delNoteRes => {
+      if (delNoteRes.ok) {
+        return delNoteRes.json().then(delNoteData => {
+          if (delNoteData && delNoteData.length > 0) {
+            const fullDeletedName = delNoteData[0].name;
+            const parts = fullDeletedName.split(':');
+            const note = parts.slice(2).join(':') || "Silinme notu bırakılmamış.";
+            
+            alert(`Skorunuz kurucu tarafından silindi!\nNot: ${note}\n\nOyununuz sıfırlanıyor...`);
+            
+            // Silinme notu satırını veritabanından temizle
+            fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(fullDeletedName)}`, {
               method: 'DELETE',
               headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`
               }
-            });
+            })
+            .then(() => {
+              // Yerel ismi ve skoru temizle, oyunu sıfırla
+              localStorage.removeItem('cubex_playerName');
+              localStorage.removeItem('cubex_lastSubmitted');
+              newGame();
+            })
+            .catch(e => console.error(e));
+            
+            return false;
           }
-        }
-        
-        if (activeBan) {
-          alert(banMessage);
-          localStorage.removeItem('cubex_playerName');
-          localStorage.removeItem('cubex_lastSubmitted');
-          newGame();
-          return;
-        }
-      }
-    }
-
-    // Kurucu tarafından silinme notu bırakılmış mı kontrol et (Oyun başında veya oyun içinde)
-    const delNoteRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.deleted:${encodeURIComponent(localName)}:%25&select=name`, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    });
-    
-    if (delNoteRes.ok) {
-      const delNoteData = await delNoteRes.json();
-      if (delNoteData && delNoteData.length > 0) {
-        const fullDeletedName = delNoteData[0].name;
-        const parts = fullDeletedName.split(':');
-        const note = parts.slice(2).join(':') || "Silinme notu bırakılmamış.";
-        
-        alert(`Skorunuz kurucu tarafından silindi!\nNot: ${note}\n\nOyununuz sıfırlanıyor...`);
-        
-        // Silinme notu satırını veritabanından temizle
-        await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(fullDeletedName)}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
+          return true;
         });
-        
-        // Yerel ismi ve skoru temizle, oyunu sıfırla
-        localStorage.removeItem('cubex_playerName');
-        localStorage.removeItem('cubex_lastSubmitted');
-        newGame();
-        return;
       }
-    }
+      return true;
+    });
+  })
+  .then(shouldContinue => {
+    if (!shouldContinue) return;
     
     // Oyun esnasında aktif skor gönderildikten sonra tablodan silinme kontrolü
     if (score >= 1000 && hasSubmittedThisGame) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(localName)}&select=score`, {
+      return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(localName)}&select=score`, {
         headers: {
           'apikey': SUPABASE_KEY,
           'Authorization': `Bearer ${SUPABASE_KEY}`
         }
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        if (data.length === 0) {
-          // Kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
-          const censorRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu%25&select=name`, {
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`
+      })
+      .then(res => {
+        if (res.ok) {
+          return res.json().then(data => {
+            if (data.length === 0) {
+              // Kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
+              return fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu%25&select=name`, {
+                headers: {
+                  'apikey': SUPABASE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+              })
+              .then(censorRes => {
+                if (censorRes.ok) {
+                  return censorRes.json().then(censorData => {
+                    if (censorData && censorData.length > 0) {
+                      const newName = censorData[0].name;
+                      localStorage.setItem('cubex_playerName', newName);
+                      checkAndShowCensorNote(newName).then(() => {
+                        showCensorPrompt(newName);
+                      });
+                      return false;
+                    }
+                    return true;
+                  });
+                }
+                return true;
+              })
+              .then(censorContinue => {
+                if (!censorContinue) return;
+                // Silinme notu bulunamadıysa ama satır silindiyse varsayılan uyarıyı göster
+                alert("Skorunuz kurucu tarafından silindi! Oyununuz sıfırlanıyor...");
+                localStorage.removeItem('cubex_playerName');
+                localStorage.removeItem('cubex_lastSubmitted');
+                newGame();
+              });
             }
           });
-          
-          if (censorRes.ok) {
-            const censorData = await censorRes.json();
-            if (censorData && censorData.length > 0) {
-              const newName = censorData[0].name;
-              localStorage.setItem('cubex_playerName', newName);
-              await checkAndShowCensorNote(newName);
-              showCensorPrompt(newName);
-              return;
-            }
-          }
-          
-          // Silinme notu bulunamadıysa ama satır silindiyse varsayılan uyarıyı göster
-          alert("Skorunuz kurucu tarafından silindi! Oyununuz sıfırlanıyor...");
-          localStorage.removeItem('cubex_playerName');
-          localStorage.removeItem('cubex_lastSubmitted');
-          newGame();
         }
-      }
+      });
     }
-  } catch (err) {
+  })
+  .catch(err => {
     console.error("Censorship/Deletion check error:", err);
-  }
+  });
 }
 
 function showCensorPrompt(censoredName) {
@@ -1774,81 +1807,98 @@ function updateStickySelfRankVisibility() {
   }
 }
 
-async function submitScore(pName, finalScore, silent = false) {
-  try {
-    // Engelli (Ban) kontrolü - Çift Katman Güvenlik (Fail-Safe)
-    const banRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.banned:${encodeURIComponent(pName)}:%25&select=name`, {
+function submitScore(pName, finalScore, silent = false) {
+  // Engelli (Ban) kontrolü - Çift Katman Güvenlik (Fail-Safe)
+  return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.banned:${encodeURIComponent(pName)}:%25&select=name`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
+    }
+  })
+  .then(banRes => {
+    if (banRes.ok) {
+      return banRes.json().then(banData => {
+        if (banData && banData.length > 0) {
+          const banKey = banData[0].name;
+          const parts = banKey.split(':');
+          const expireVal = parts[2];
+          
+          let activeBan = false;
+          let banMessage = "";
+          
+          if (expireVal === 'forever') {
+            activeBan = true;
+            banMessage = "Liderlik tablosuna girişiniz kurucu tarafından kalıcı olarak engellenmiştir!";
+          } else {
+            const expireTime = parseInt(expireVal || '0');
+            if (Date.now() < expireTime) {
+              activeBan = true;
+              const remainingDate = new Date(expireTime);
+              banMessage = `Liderlik tablosuna girişiniz kurucu tarafından engellenmiştir!\nBan Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
+            } else {
+              // Ban süresi dolmuş, veritabanındaki ban satırını silelim
+              fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
+                method: 'DELETE',
+                headers: {
+                  'apikey': SUPABASE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+              }).catch(e => console.error(e));
+            }
+          }
+          
+          if (activeBan) {
+            if (!silent) alert(banMessage);
+            localStorage.removeItem('cubex_playerName');
+            localStorage.removeItem('cubex_lastSubmitted');
+            newGame();
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+    return true;
+  })
+  .then(shouldContinue => {
+    if (!shouldContinue) return false;
+    
+    // Eğer yeni skor, veritabanındaki mevcut skorundan küçük veya eşitse, yüksek skoru ezip düşürmemek için yüklemeyi atla
+    return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}&select=score`, {
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
-    });
-    
-    if (banRes.ok) {
-      const banData = await banRes.json();
-      if (banData && banData.length > 0) {
-        const banKey = banData[0].name;
-        const parts = banKey.split(':');
-        const expireVal = parts[2];
-        
-        let activeBan = false;
-        let banMessage = "";
-        
-        if (expireVal === 'forever') {
-          activeBan = true;
-          banMessage = "Liderlik tablosuna girişiniz kurucu tarafından kalıcı olarak engellenmiştir!";
-        } else {
-          const expireTime = parseInt(expireVal || '0');
-          if (Date.now() < expireTime) {
-            activeBan = true;
-            const remainingDate = new Date(expireTime);
-            banMessage = `Liderlik tablosuna girişiniz kurucu tarafından engellenmiştir!\nBan Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
-          } else {
-            // Ban süresi dolmuş, veritabanındaki ban satırını silelim
-            await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
-              method: 'DELETE',
-              headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
-              }
-            });
-          }
-        }
-        
-        if (activeBan) {
-          if (!silent) alert(banMessage);
-          localStorage.removeItem('cubex_playerName');
-          localStorage.removeItem('cubex_lastSubmitted');
-          newGame();
-          return false;
-        }
-      }
-    }
-
-    // Eğer yeni skor, veritabanındaki mevcut skorundan küçük veya eşitse, yüksek skoru ezip düşürmemek için yüklemeyi atla
-    try {
-      const currentRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}&select=score`, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
+    })
+    .then(currentRes => {
       if (currentRes.ok) {
-        const currentData = await currentRes.json();
-        if (currentData && currentData.length > 0) {
-          const existingScore = currentData[0].score;
-          if (finalScore <= existingScore) {
-            console.log(`Yeni skor (${finalScore}) mevcut yüksek skordan (${existingScore}) küçük veya eşit olduğu için yükleme atlandı.`);
-            hasSubmittedThisGame = true; // Zaten veritabanında daha iyi bir skoru var, işaretle
-            return true;
+        return currentRes.json().then(currentData => {
+          if (currentData && currentData.length > 0) {
+            const existingScore = currentData[0].score;
+            if (finalScore <= existingScore) {
+              console.log(`Yeni skor (${finalScore}) mevcut yüksek skordan (${existingScore}) küçük veya eşit olduğu için yükleme atlandı.`);
+              hasSubmittedThisGame = true; // Zaten veritabanında daha iyi bir skoru var, işaretle
+              return true;
+            }
           }
-        }
+          return performPost();
+        });
       }
-    } catch (e) {
+      return performPost();
+    })
+    .catch(e => {
       console.warn("Mevcut en yüksek skor denetlenirken geçici bir hata oluştu:", e);
-    }
+      return performPost();
+    });
+  })
+  .catch(e => {
+    console.error("Skor yüklenemedi", e);
+    if (!silent) alert("Bağlantı hatası: " + e.message);
+    return false;
+  });
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+  function performPost() {
+    return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -1857,45 +1907,44 @@ async function submitScore(pName, finalScore, silent = false) {
         'Prefer': 'resolution=merge-duplicates'
       },
       body: JSON.stringify({ name: pName, score: finalScore })
+    })
+    .then(res => {
+      if (res.ok) {
+        localStorage.setItem('cubex_lastSubmitted', finalScore);
+        console.log("Skor Supabase'e başarıyla kaydedildi.");
+        hasSubmittedThisGame = true; // Yükleme başarılı, işaretle
+        return true;
+      } else {
+        return res.text().then(errText => {
+          console.error("Supabase Hatası:", errText);
+          if (!silent) alert("Veritabanı Hatası: " + errText);
+          return false;
+        });
+      }
     });
-    
-    if (res.ok) {
-      localStorage.setItem('cubex_lastSubmitted', finalScore);
-      console.log("Skor Supabase'e başarıyla kaydedildi.");
-      hasSubmittedThisGame = true; // Yükleme başarılı, işaretle
-      return true;
-    } else {
-      const errText = await res.text();
-      console.error("Supabase Hatası:", errText);
-      if (!silent) alert("Veritabanı Hatası: " + errText);
-      return false;
-    }
-  } catch(e) {
-    console.error("Skor yüklenemedi", e);
-    if (!silent) alert("Bağlantı hatası: " + e.message);
-    return false;
   }
 }
 
-async function deleteActiveScore(pName) {
-  if (!pName) return;
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, {
-      method: 'DELETE',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    });
+function deleteActiveScore(pName) {
+  if (!pName) return Promise.resolve();
+  return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, {
+    method: 'DELETE',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
+    }
+  })
+  .then(res => {
     if (res.ok) {
       console.log(`"${pName}" adlı oyuncunun aktif skoru veritabanından silindi.`);
     }
-  } catch(e) {
+  })
+  .catch(e => {
     console.error("Skor silinirken hata oluştu:", e);
-  }
+  });
 }
 
-async function loadLeaderboard() {
+function loadLeaderboard() {
   if (!leaderboardList) return;
   
   leaderboardList.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
@@ -1903,17 +1952,17 @@ async function loadLeaderboard() {
   if (stickySelfRank) stickySelfRank.style.display = 'none';
   window.selfRank = null;
   
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=gte.1000&select=name,score&order=score.desc&limit=25`, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    });
-    
+  fetch(`${SUPABASE_URL}/rest/v1/scores?score=gte.1000&select=name,score&order=score.desc&limit=25`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
+    }
+  })
+  .then(res => {
     if (!res.ok) throw new Error("API Hatası");
-    const data = await res.json();
-    
+    return res.json();
+  })
+  .then(data => {
     leaderboardList.innerHTML = '';
     
     if (data.length === 0) {
@@ -1950,55 +1999,64 @@ async function loadLeaderboard() {
 
     // Kendi sıralamamızı veritabanından çekelim
     if (playerName) {
-      try {
-        const selfRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(playerName)}&select=score`, {
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
-        });
-        if (selfRes.ok) {
-          const selfData = await selfRes.json();
-          if (selfData && selfData.length > 0) {
-            const selfScore = selfData[0].score;
-            const countRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?score=gt.${selfScore}&select=count`, {
-              headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Prefer': 'count=exact'
-              }
-            });
-            let selfRank = 1;
-            if (countRes.ok) {
-              const contentRange = countRes.headers.get('content-range');
-              if (contentRange) {
-                const countMatch = contentRange.match(/\/(\d+)/);
-                if (countMatch) {
-                  selfRank = parseInt(countMatch[1]) + 1;
-                }
-              }
-            }
-            
-            document.getElementById('selfRankNum').textContent = `#${selfRank}`;
-            document.getElementById('selfRankNameText').textContent = playerName;
-            document.getElementById('selfRankScoreText').textContent = `${selfScore} Puan`;
-            window.selfRank = selfRank;
-          }
+      fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(playerName)}&select=score`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
         }
-      } catch (selfErr) {
+      })
+      .then(selfRes => {
+        if (selfRes.ok) {
+          return selfRes.json().then(selfData => {
+            if (selfData && selfData.length > 0) {
+              const selfScore = selfData[0].score;
+              return fetch(`${SUPABASE_URL}/rest/v1/scores?score=gt.${selfScore}&select=count`, {
+                headers: {
+                  'apikey': SUPABASE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_KEY}`,
+                  'Prefer': 'count=exact'
+                }
+              })
+              .then(countRes => {
+                let selfRank = 1;
+                if (countRes.ok) {
+                  const contentRange = countRes.headers.get('content-range');
+                  if (contentRange) {
+                    const countMatch = contentRange.match(/\/(\d+)/);
+                    if (countMatch) {
+                      selfRank = parseInt(countMatch[1]) + 1;
+                    }
+                  }
+                }
+                
+                document.getElementById('selfRankNum').textContent = `#${selfRank}`;
+                document.getElementById('selfRankNameText').textContent = playerName;
+                document.getElementById('selfRankScoreText').textContent = `${selfScore} Puan`;
+                window.selfRank = selfRank;
+                
+                // Scroll dinleyicisini ekle ve başlangıç durumunu ayarla
+                leaderboardList.removeEventListener('scroll', updateStickySelfRankVisibility);
+                leaderboardList.addEventListener('scroll', updateStickySelfRankVisibility);
+                updateStickySelfRankVisibility();
+              });
+            }
+          });
+        }
+      })
+      .catch(selfErr => {
         console.error(selfErr);
-      }
+      });
+    } else {
+      // Scroll dinleyicisini ekle ve başlangıç durumunu ayarla
+      leaderboardList.removeEventListener('scroll', updateStickySelfRankVisibility);
+      leaderboardList.addEventListener('scroll', updateStickySelfRankVisibility);
+      updateStickySelfRankVisibility();
     }
-    
-    // Scroll dinleyicisini ekle ve başlangıç durumunu ayarla
-    leaderboardList.removeEventListener('scroll', updateStickySelfRankVisibility);
-    leaderboardList.addEventListener('scroll', updateStickySelfRankVisibility);
-    updateStickySelfRankVisibility();
-    
-  } catch(e) {
+  })
+  .catch(e => {
     console.error(e);
     leaderboardList.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
-  }
+  });
 }
 
 // ---- Cheat Mode Logic ----
