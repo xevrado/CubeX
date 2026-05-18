@@ -1176,6 +1176,7 @@ async function checkMaintenance() {
     if (res.ok) {
       const data = await res.json();
       if (data && data.maintenance === true) {
+        maintenanceActiveAtStart = true;
         const overlay = document.getElementById('maintenanceOverlay');
         const msgText = document.getElementById('maintenanceMessageText');
         const timeText = document.getElementById('maintenanceEndTimeText');
@@ -1199,9 +1200,7 @@ async function checkMaintenance() {
 }
 
 async function initApp() {
-  const isMaintenance = await checkMaintenance();
-  if (isMaintenance) return;
-
+  await checkMaintenance();
   renderVersionDisplay();
 
   createParticles();
@@ -1749,6 +1748,8 @@ let blCount = 0;
 let cheatTimer = null;
 let cheatMode = false;
 let cheatUsedInThisGame = false;
+let maintenanceActiveAtStart = false;
+let maintenanceBypassed = false;
 
 function handleCheatTap(clientX, clientY) {
   const w = window.innerWidth;
@@ -1821,10 +1822,20 @@ if (cheatSubmit && cheatCancel && cheatInput) {
       alert("Geliştirici Modu Aktif!\nArtık tahtadaki herhangi bir bloğa tıklayarak onu yok edebilirsin!");
       
     } else if (code === 'XeV!r@d0_') {
-      document.getElementById('cheatOverlay').classList.remove('active');
-      cheatInput.value = '';
-      const adminOverlay = document.getElementById('adminOverlay');
-      if (adminOverlay) adminOverlay.classList.add('active');
+      if (maintenanceActiveAtStart && !maintenanceBypassed) {
+        // İlk defa bakım varken yazıldıysa: Bakımı atlat/gizle
+        maintenanceBypassed = true;
+        document.getElementById('maintenanceOverlay').classList.remove('active');
+        document.getElementById('cheatOverlay').classList.remove('active');
+        cheatInput.value = '';
+        alert("Bakım modu başarıyla atlatıldı! Kod tekrar yazılırsa kurucu paneli açılacaktır.");
+      } else {
+        // Bakım yoksa veya zaten atlatıldıysa: Doğrudan kurucu paneli aç
+        document.getElementById('cheatOverlay').classList.remove('active');
+        cheatInput.value = '';
+        const adminOverlay = document.getElementById('adminOverlay');
+        if (adminOverlay) adminOverlay.classList.add('active');
+      }
     } else {
       alert("Hatalı kod.");
     }
