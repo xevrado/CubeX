@@ -596,7 +596,7 @@ function addScore(pts) {
   if (score >= 1000) {
     const pName = localStorage.getItem('cubex_playerName');
     if (pName) {
-      submitScore(pName, score, true); // Arka planda skoru doğrudan yükle (Hızlı, güvenli ve yarış durumsuz)
+      submitScore(pName, Math.max(score, bestScore), true); // Arka planda en iyi skoru doğrudan yükle (Hızlı, güvenli ve yarış durumsuz)
     } else {
       const nameOverlay = document.getElementById('nameOverlay');
       if (nameOverlay && !nameOverlay.classList.contains('active')) {
@@ -1423,9 +1423,10 @@ if (saveNameBtn && playerNameInput) {
           localStorage.setItem('cubex_playerName', pName);
           nameOverlay.classList.remove('active');
           
-          // Real-time live submission
-          if (score >= 1000) {
-            submitScore(pName, score, true);
+          // Real-time live submission (en iyi skoru gönder)
+          const finalSub = Math.max(score, bestScore);
+          if (finalSub >= 1000) {
+            submitScore(pName, finalSub, true);
           }
           
           checkNameCensorship();
