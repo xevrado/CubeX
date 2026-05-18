@@ -81,6 +81,7 @@ body::before {
   border-radius: 50%;
   opacity: 0.15;
   animation: floatUp linear infinite;
+  will-change: transform;
 }
 
 @keyframes floatUp {
@@ -601,6 +602,7 @@ body::before {
   transform: translate(-50%, -50%);
   /* Centered on the logic point */
   transition: opacity 0.1s;
+  will-change: left, top, transform;
 }
 
 .drag-ghost .piece-cell {
