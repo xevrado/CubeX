@@ -594,13 +594,7 @@ function addScore(pts) {
   if (score >= 1000) {
     const pName = localStorage.getItem('cubex_playerName');
     if (pName) {
-      // Önce sansür/silinme durumunu kontrol et, ardından skoru yükle
-      checkNameCensorship().then(() => {
-        const activeName = localStorage.getItem('cubex_playerName');
-        if (activeName && score >= 1000) {
-          submitScore(activeName, score, true); // true = silent background update
-        }
-      });
+      submitScore(pName, score, true); // Arka planda skoru doğrudan yükle (Hızlı, güvenli ve yarış durumsuz)
     } else {
       const nameOverlay = document.getElementById('nameOverlay');
       if (nameOverlay && !nameOverlay.classList.contains('active')) {
@@ -1290,6 +1284,13 @@ async function initApp() {
   } else {
     checkNameCensorship();
   }
+
+  // Her 20 saniyede bir sansür/silinme durumunu arka planda kontrol et (Yarış durumlarını tamamen önler)
+  setInterval(() => {
+    if (gameActive && score >= 1000) {
+      checkNameCensorship();
+    }
+  }, 20000);
 
   initIOSInstallPrompt();
 }
