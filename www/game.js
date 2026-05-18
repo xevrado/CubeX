@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.4.0.0"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.4.5.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
