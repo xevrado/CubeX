@@ -1303,6 +1303,40 @@ function initApp() {
     // Oyuna girince akıllı cihaz/IP tabanlı hesap kontrolü yap
     checkDeviceAndIpRegistration();
 
+    // Tek seferlik migrasyon: Eski sürümde liderlik tablosunda takılı kalmış
+    // "en yüksek skor" kayıtlarını temizle. Her cihaz bunu sadece bir kez yapar.
+    // Eğer cihazda 1000+ puanlı kaydedilmiş aktif bir oyun varsa, silmek yerine
+    // o aktif skoru DB'ye tekrar yazarak senkronize ederiz (veri kaybı olmasın).
+    try {
+      if (!localStorage.getItem('cubex_oldScoreCleaned_v1')) {
+        const pNameForCleanup = localStorage.getItem('cubex_playerName');
+        if (pNameForCleanup) {
+          let savedActiveScore = 0;
+          try {
+            const savedRaw = localStorage.getItem('cubex_gameState');
+            if (savedRaw) {
+              const savedObj = JSON.parse(savedRaw);
+              if (savedObj && typeof savedObj.score === 'number') {
+                savedActiveScore = savedObj.score;
+              }
+            }
+          } catch (_) { /* bozuk kayıt: yok say */ }
+
+          const cleanupPromise = (savedActiveScore >= 1000)
+            ? submitScore(pNameForCleanup, savedActiveScore, true)
+            : deleteActiveScore(pNameForCleanup);
+
+          cleanupPromise
+            .then(() => {
+              localStorage.setItem('cubex_oldScoreCleaned_v1', '1');
+            })
+            .catch(() => { /* sessizce yok say */ });
+        } else {
+          localStorage.setItem('cubex_oldScoreCleaned_v1', '1');
+        }
+      }
+    } catch (e) { /* localStorage erişilemezse sessizce yok say */ }
+
     // Her 20 saniyede bir sansür/silinme durumunu arka planda kontrol et (Yarış durumlarını tamamen önler)
     setInterval(() => {
       if (gameActive && score >= 1000) {
