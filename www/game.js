@@ -11,73 +11,73 @@ const COLORS = 8; // color-0 … color-7
 // ---- Piece Shapes (relative coords [row, col]) ----
 const SHAPES = [
   // ── Singles / small ──
-  { cells: [[0,0]], name: '1x1' },
+  { cells: [[0, 0]], name: '1x1' },
 
   // ── Lines ──
-  { cells: [[0,0],[0,1]], name: '1x2' },
-  { cells: [[0,0],[1,0]], name: '2x1' },
-  { cells: [[0,0],[0,1],[0,2]], name: '1x3' },
-  { cells: [[0,0],[1,0],[2,0]], name: '3x1' },
-  { cells: [[0,0],[0,1],[0,2],[0,3]], name: '1x4' },
-  { cells: [[0,0],[1,0],[2,0],[3,0]], name: '4x1' },
-  { cells: [[0,0],[0,1],[0,2],[0,3],[0,4]], name: '1x5' },
-  { cells: [[0,0],[1,0],[2,0],[3,0],[4,0]], name: '5x1' },
+  { cells: [[0, 0], [0, 1]], name: '1x2' },
+  { cells: [[0, 0], [1, 0]], name: '2x1' },
+  { cells: [[0, 0], [0, 1], [0, 2]], name: '1x3' },
+  { cells: [[0, 0], [1, 0], [2, 0]], name: '3x1' },
+  { cells: [[0, 0], [0, 1], [0, 2], [0, 3]], name: '1x4' },
+  { cells: [[0, 0], [1, 0], [2, 0], [3, 0]], name: '4x1' },
+  { cells: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], name: '1x5' },
+  { cells: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], name: '5x1' },
 
   // ── Squares ──
-  { cells: [[0,0],[0,1],[1,0],[1,1]], name: '2x2' },
-  { cells: [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]], name: '3x3' },
+  { cells: [[0, 0], [0, 1], [1, 0], [1, 1]], name: '2x2' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]], name: '3x3' },
 
   // ── Rectangles ──
-  { cells: [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]], name: '2x3' },
-  { cells: [[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]], name: '3x2' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]], name: '2x3' },
+  { cells: [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [2, 1]], name: '3x2' },
 
   // ── L shapes ──
-  { cells: [[0,0],[1,0],[1,1]], name: 'L1' },
-  { cells: [[0,0],[0,1],[1,0]], name: 'L2' },
-  { cells: [[0,0],[0,1],[1,1]], name: 'L3' },
-  { cells: [[0,0],[1,0],[1,-1]], name: 'L4' },
+  { cells: [[0, 0], [1, 0], [1, 1]], name: 'L1' },
+  { cells: [[0, 0], [0, 1], [1, 0]], name: 'L2' },
+  { cells: [[0, 0], [0, 1], [1, 1]], name: 'L3' },
+  { cells: [[0, 0], [1, 0], [1, -1]], name: 'L4' },
 
   // ── Big L shapes ──
-  { cells: [[0,0],[1,0],[2,0],[2,1],[2,2]], name: 'BigL1' },
-  { cells: [[0,0],[0,1],[0,2],[1,0],[2,0]], name: 'BigL2' },
-  { cells: [[0,0],[0,1],[0,2],[1,2],[2,2]], name: 'BigL3' },
-  { cells: [[0,0],[1,0],[2,0],[2,-1],[2,-2]], name: 'BigL4' },
+  { cells: [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]], name: 'BigL1' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 0], [2, 0]], name: 'BigL2' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2]], name: 'BigL3' },
+  { cells: [[0, 0], [1, 0], [2, 0], [2, -1], [2, -2]], name: 'BigL4' },
 
   // ── J shapes (mirror of L) ──
-  { cells: [[0,0],[0,1],[1,0],[2,0]], name: 'J1' },
-  { cells: [[0,0],[1,0],[1,1],[1,2]], name: 'J2' },
-  { cells: [[0,0],[0,1],[0,2],[1,0]], name: 'J3' },
-  { cells: [[0,0],[0,1],[0,2],[1,2]], name: 'J4' },
+  { cells: [[0, 0], [0, 1], [1, 0], [2, 0]], name: 'J1' },
+  { cells: [[0, 0], [1, 0], [1, 1], [1, 2]], name: 'J2' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 0]], name: 'J3' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 2]], name: 'J4' },
 
   // ── T shapes ──
-  { cells: [[0,0],[0,1],[0,2],[1,1]], name: 'T1' },
-  { cells: [[0,0],[1,0],[1,1],[2,0]], name: 'T2' },
-  { cells: [[0,1],[1,0],[1,1],[1,2]], name: 'T3' },
-  { cells: [[0,0],[1,0],[1,-1],[2,0]], name: 'T4' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 1]], name: 'T1' },
+  { cells: [[0, 0], [1, 0], [1, 1], [2, 0]], name: 'T2' },
+  { cells: [[0, 1], [1, 0], [1, 1], [1, 2]], name: 'T3' },
+  { cells: [[0, 0], [1, 0], [1, -1], [2, 0]], name: 'T4' },
 
   // ── Z / S shapes ──
-  { cells: [[0,0],[0,1],[1,1],[1,2]], name: 'Z1' },
-  { cells: [[0,0],[1,0],[1,-1],[2,-1]], name: 'Z2' },
-  { cells: [[0,0],[0,1],[1,-1],[1,0]], name: 'S1' },
-  { cells: [[0,0],[1,0],[1,1],[2,1]], name: 'S2' },
+  { cells: [[0, 0], [0, 1], [1, 1], [1, 2]], name: 'Z1' },
+  { cells: [[0, 0], [1, 0], [1, -1], [2, -1]], name: 'Z2' },
+  { cells: [[0, 0], [0, 1], [1, -1], [1, 0]], name: 'S1' },
+  { cells: [[0, 0], [1, 0], [1, 1], [2, 1]], name: 'S2' },
 
   // ── Plus / Cross ──
-  { cells: [[0,1],[1,0],[1,1],[1,2],[2,1]], name: 'Plus' },
-  { cells: [[0,0],[1,0],[1,1]], name: 'SmallCross' },
+  { cells: [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]], name: 'Plus' },
+  { cells: [[0, 0], [1, 0], [1, 1]], name: 'SmallCross' },
 
   // ── Corner / Angle shapes ──
-  { cells: [[0,0],[0,1],[1,0]], name: 'Corner1' },
-  { cells: [[0,0],[0,1],[1,1]], name: 'Corner2' },
-  { cells: [[0,0],[1,0],[1,1]], name: 'Corner3' },
-  { cells: [[0,1],[1,0],[1,1]], name: 'Corner4' },
+  { cells: [[0, 0], [0, 1], [1, 0]], name: 'Corner1' },
+  { cells: [[0, 0], [0, 1], [1, 1]], name: 'Corner2' },
+  { cells: [[0, 0], [1, 0], [1, 1]], name: 'Corner3' },
+  { cells: [[0, 1], [1, 0], [1, 1]], name: 'Corner4' },
 
   // ── Diagonal pair ──
-  { cells: [[0,0],[1,1]], name: 'Diag1' },
-  { cells: [[0,1],[1,0]], name: 'Diag2' },
+  { cells: [[0, 0], [1, 1]], name: 'Diag1' },
+  { cells: [[0, 1], [1, 0]], name: 'Diag2' },
 
   // ── Small T variants ──
-  { cells: [[0,0],[0,1],[0,2],[1,0]], name: 'SmallT1' },
-  { cells: [[0,0],[0,1],[0,2],[1,2]], name: 'SmallT2' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 0]], name: 'SmallT1' },
+  { cells: [[0, 0], [0, 1], [0, 2], [1, 2]], name: 'SmallT2' },
 ];
 
 // ---- State ----
@@ -142,40 +142,40 @@ function playTone(freq, duration, type = 'sine', vol = 0.12) {
     gain.connect(audioCtx.destination);
     osc.start();
     osc.stop(audioCtx.currentTime + duration);
-  } catch (e) {}
+  } catch (e) { }
 }
 
-function sfxPlace()   { playTone(520, 0.12, 'sine', 0.15); playTone(660, 0.1, 'sine', 0.10); }
-function sfxClear()   { playTone(780, 0.15, 'triangle', 0.18); playTone(1040, 0.2, 'sine', 0.12); }
-function sfxCombo()   { playTone(880, 0.1, 'sine', 0.2); setTimeout(() => playTone(1100, 0.15, 'sine', 0.18), 80); setTimeout(() => playTone(1320, 0.2, 'sine', 0.15), 160); }
-function sfxGameOver(){ playTone(300, 0.3, 'sawtooth', 0.1); setTimeout(() => playTone(200, 0.4, 'sawtooth', 0.08), 200); }
-function sfxClick()   { playTone(600, 0.06, 'sine', 0.08); }
+function sfxPlace() { playTone(520, 0.12, 'sine', 0.15); playTone(660, 0.1, 'sine', 0.10); }
+function sfxClear() { playTone(780, 0.15, 'triangle', 0.18); playTone(1040, 0.2, 'sine', 0.12); }
+function sfxCombo() { playTone(880, 0.1, 'sine', 0.2); setTimeout(() => playTone(1100, 0.15, 'sine', 0.18), 80); setTimeout(() => playTone(1320, 0.2, 'sine', 0.15), 160); }
+function sfxGameOver() { playTone(300, 0.3, 'sawtooth', 0.1); setTimeout(() => playTone(200, 0.4, 'sawtooth', 0.08), 200); }
+function sfxClick() { playTone(600, 0.06, 'sine', 0.08); }
 
 // ---- DOM refs ----
-const boardEl        = document.getElementById('gameBoard');
-const scoreEl        = document.getElementById('scoreDisplay');
-const bestEl         = document.getElementById('bestDisplay');
-const levelEl        = document.getElementById('levelDisplay');
-const comboCountEl   = document.getElementById('comboCount');
+const boardEl = document.getElementById('gameBoard');
+const scoreEl = document.getElementById('scoreDisplay');
+const bestEl = document.getElementById('bestDisplay');
+const levelEl = document.getElementById('levelDisplay');
+const comboCountEl = document.getElementById('comboCount');
 const comboDisplayEl = document.getElementById('comboDisplay');
-const trayEl         = document.getElementById('pieceTray');
-const clearFlashEl   = document.getElementById('clearFlash');
-const scorePopupEl   = document.getElementById('scorePopup');
-const gameOverOverlay= document.getElementById('gameOverOverlay');
-const helpOverlay    = document.getElementById('helpOverlay');
-const soundBtn       = document.getElementById('soundBtn');
-const helpBtn        = document.getElementById('helpBtn');
-const restartBtn     = document.getElementById('restartBtn');
-const playAgainBtn   = document.getElementById('playAgainBtn');
-const closeHelpBtn   = document.getElementById('closeHelpBtn');
-const finalScoreEl   = document.getElementById('finalScore');
-const finalBestEl    = document.getElementById('finalBest');
-const finalLevelEl   = document.getElementById('finalLevel');
+const trayEl = document.getElementById('pieceTray');
+const clearFlashEl = document.getElementById('clearFlash');
+const scorePopupEl = document.getElementById('scorePopup');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const helpOverlay = document.getElementById('helpOverlay');
+const soundBtn = document.getElementById('soundBtn');
+const helpBtn = document.getElementById('helpBtn');
+const restartBtn = document.getElementById('restartBtn');
+const playAgainBtn = document.getElementById('playAgainBtn');
+const closeHelpBtn = document.getElementById('closeHelpBtn');
+const finalScoreEl = document.getElementById('finalScore');
+const finalBestEl = document.getElementById('finalBest');
+const finalLevelEl = document.getElementById('finalLevel');
 
 // ---- Initialize Particles ----
 function createParticles() {
   const container = document.getElementById('bgParticles');
-  const colors = ['#4f8ef7','#a855f7','#ec4899','#06b6d4','#22c55e','#eab308'];
+  const colors = ['#4f8ef7', '#a855f7', '#ec4899', '#06b6d4', '#22c55e', '#eab308'];
   // Parçacık sayısını mobil için azalttık
   for (let i = 0; i < 8; i++) {
     const p = document.createElement('div');
@@ -218,12 +218,12 @@ function renderBoard() {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const cell = cellElements[r][c];
       if (!cell) continue;
-      
+
       let newClass = 'cell';
       if (board[r][c] !== null) {
         newClass += ' filled color-' + board[r][c];
       }
-      
+
       // Gereksiz reflow'dan kaçınmak için sadece class değiştiyse güncelle
       if (cell.className !== newClass) {
         cell.className = newClass;
@@ -278,24 +278,24 @@ function getFittingShapes() {
 function findEmptyClusters() {
   const visited = Array.from({ length: BOARD_SIZE }, () => new Array(BOARD_SIZE).fill(false));
   const clusters = [];
-  
+
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       if (board[r][c] === null && !visited[r][c]) {
         const cluster = [];
         const queue = [[r, c]];
         visited[r][c] = true;
-        
+
         while (queue.length > 0) {
           const [currR, currC] = queue.shift();
           cluster.push([currR, currC]);
-          
+
           const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
           for (const [dr, dc] of dirs) {
             const nr = currR + dr;
             const nc = currC + dc;
-            if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && 
-                board[nr][nc] === null && !visited[nr][nc]) {
+            if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE &&
+              board[nr][nc] === null && !visited[nr][nc]) {
               visited[nr][nc] = true;
               queue.push([nr, nc]);
             }
@@ -311,7 +311,7 @@ function findEmptyClusters() {
 function generatePieces() {
   const clusters = findEmptyClusters();
   const fittingShapes = getFittingShapes();
-  
+
   // Eğer hiç sığan şekil yoksa, oyun zaten bitecek — küçük şekilleri dene
   if (fittingShapes.length === 0) {
     currentPieces = [randomPiece(), randomPiece(), randomPiece()];
@@ -503,7 +503,7 @@ function checkAndClear() {
     try {
       haptics.impact(combo > 1 ? 'HEAVY' : 'MEDIUM');
       if (linesCleared >= 2) createConfetti();
-    } catch (err) {}
+    } catch (err) { }
 
     // 4. Visual Animation — Race condition koruması
     clearingInProgress = true;
@@ -590,7 +590,7 @@ function addScore(pts) {
     const menuBestDisplay = document.getElementById('menuBestDisplay');
     if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
   }
-  
+
   // Real-time progress bar'ı güncelle
   updateScoreProgress();
 
@@ -600,7 +600,7 @@ function addScore(pts) {
     if (pName) {
       const now = Date.now();
       const scoreDiff = score - lastSubmittedScoreVal;
-      
+
       if (scoreDiff >= 250 || (now - lastSubmitTime > 15000 && scoreDiff > 0)) {
         lastSubmitTime = now;
         lastSubmittedScoreVal = score;
@@ -634,7 +634,7 @@ function onDragStart(e) {
   if (e.cancelable) e.preventDefault();
 
   if (dragState) return;
-  
+
   if (e.type === 'touchstart' && e.touches.length > 1) {
     return;
   }
@@ -663,7 +663,7 @@ function onDragStart(e) {
   ghostEl.className = 'drag-ghost';
   const maxR = Math.max(...piece.cells.map(c => c[0])) + 1;
   const maxC = Math.max(...piece.cells.map(c => c[1])) + 1;
-  
+
   // Use exact board cell size
   ghostEl.style.gridTemplateColumns = `repeat(${maxC}, ${cellSize}px)`;
   ghostEl.style.gridTemplateRows = `repeat(${maxR}, ${cellSize}px)`;
@@ -696,10 +696,10 @@ function onDragStart(e) {
   const touch = e.touches ? e.touches[0] : e;
   moveGhost(touch.clientX, touch.clientY);
 
-  dragState = { 
-    pieceIndex: idx, 
-    piece, 
-    touchId: e.touches ? e.touches[0].identifier : null 
+  dragState = {
+    pieceIndex: idx,
+    piece,
+    touchId: e.touches ? e.touches[0].identifier : null
   };
   slot.classList.add('used');
 
@@ -727,7 +727,7 @@ let lastDragTime = 0;
 function onDragMove(e) {
   e.preventDefault();
   if (!dragState) return;
-  
+
   const now = Date.now();
   if (now - lastDragTime < 16) return; // ~60fps ile sınırla (Throttling)
   lastDragTime = now;
@@ -736,7 +736,7 @@ function onDragMove(e) {
   if (!touch) return;
 
   moveGhost(touch.clientX, touch.clientY);
-  
+
   // RequestAnimationFrame kullanarak render'ı senkronize et
   if (dragRafId) cancelAnimationFrame(dragRafId);
   dragRafId = requestAnimationFrame(() => {
@@ -750,7 +750,7 @@ function onDragEnd(e) {
   if (!touch) return;
 
   const target = getBoardPosition(touch.clientX, touch.clientY);
-  
+
   clearHighlights();
 
   if (target && !clearingInProgress && canPlace(dragState.piece.cells, target.row, target.col)) {
@@ -818,14 +818,14 @@ function cleanupDrag() {
 
 function getBoardPosition(clientX, clientY) {
   if (!dragState) return null;
-  
+
   const rect = boardEl.getBoundingClientRect();
   const padding = 6;
   const gap = 3;
   const cellSize = (rect.width - padding * 2 - gap * (BOARD_SIZE - 1)) / BOARD_SIZE;
 
-  const offsetY = 100; 
-  
+  const offsetY = 100;
+
   // The logic point is the CENTER of the piece
   const centerX = clientX;
   const centerY = clientY - offsetY;
@@ -937,7 +937,7 @@ function gameOver() {
   finalScoreEl.textContent = score;
   finalBestEl.textContent = bestScore;
   finalLevelEl.textContent = level;
-  
+
   const subEl = gameOverOverlay.querySelector('.overlay-sub');
   if (typeof cheatUsedInThisGame !== 'undefined' && cheatUsedInThisGame) {
     if (subEl) subEl.textContent = "Hile kullanıldı, puan kaydedilmedi";
@@ -946,16 +946,18 @@ function gameOver() {
   } else {
     if (subEl) subEl.textContent = "Yerleştirecek yer kalmadı";
     clearGameState();
-    
+
     gameOverOverlay.classList.add('active');
-    
-    // Oyun bittiğinde final skorunu Supabase'e yükle (Garanti senkronizasyon)
-    if (score >= 1000) {
-      const pName = localStorage.getItem('cubex_playerName');
-      if (pName) {
-        submitScore(pName, score, true);
-      }
+
+    // Oyun bittiğinde aktif skoru liderlik tablosundan sıfırla.
+    // Liderlikte sadece "o anki aktif oyun puanı" gösterilir; yenilince kayıt silinir.
+    const pName = localStorage.getItem('cubex_playerName');
+    if (pName) {
+      deleteActiveScore(pName);
     }
+    lastSubmittedScoreVal = 0;
+    lastSubmitTime = 0;
+    hasSubmittedThisGame = false;
   }
 }
 
@@ -970,6 +972,15 @@ function newGame() {
   level = 1;
   combo = 0;
   hasSubmittedThisGame = false; // Yeni oyunda sıfırla
+  lastSubmittedScoreVal = 0;
+  lastSubmitTime = 0;
+
+  // Yeni oyun başladığında eski aktif skoru liderlik tablosundan sil
+  const pNameForReset = localStorage.getItem('cubex_playerName');
+  if (pNameForReset) {
+    deleteActiveScore(pNameForReset);
+  }
+
   scoreEl.textContent = '0';
   levelEl.textContent = '1';
   comboCountEl.textContent = 'x1';
@@ -1014,13 +1025,13 @@ function loadGameState() {
   try {
     const saved = localStorage.getItem('cubex_gameState');
     if (!saved) return false;
-    
+
     const state = JSON.parse(saved);
     if (!state || !state.board || !state.currentPieces || !state.gameActive) return false;
-    
+
     // Validate board
     if (state.board.length !== BOARD_SIZE) return false;
-    
+
     board = state.board;
     score = state.score || 0;
     level = state.level || 1;
@@ -1028,7 +1039,7 @@ function loadGameState() {
     currentPieces = state.currentPieces || [];
     gameActive = true;
     hasSubmittedThisGame = score >= 1000; // Yüklenen skora göre ata
-    
+
     // Update UI
     scoreEl.textContent = score;
     levelEl.textContent = level;
@@ -1036,14 +1047,14 @@ function loadGameState() {
     comboDisplayEl.textContent = '';
     bestScore = parseInt(localStorage.getItem('cubex_best') || '0');
     bestEl.textContent = bestScore;
-    
+
     createBoard();
     // Restore board data after createBoard (which resets the array)
     board = state.board;
     renderBoard();
     renderTray();
     updateScoreProgress();
-    
+
     return true;
   } catch (e) {
     console.error('Game state load error:', e);
@@ -1130,18 +1141,18 @@ function showConfirm(message, onYes, onNo, yesText = "Evet", noText = "Hayır") 
   const msgEl = document.getElementById('confirmMessage');
   const yesBtn = document.getElementById('confirmYes');
   const noBtn = document.getElementById('confirmNo');
-  
+
   if (!overlay || !yesBtn || !noBtn) {
     // Fallback: direkt çalıştır
     if (onYes) onYes();
     return;
   }
-  
+
   if (msgEl) msgEl.textContent = message;
   yesBtn.innerHTML = `<i class="fas fa-check"></i> ${yesText}`;
   noBtn.innerHTML = `<i class="fas fa-times"></i> ${noText}`;
   overlay.classList.add('active');
-  
+
   // Eski listener'ları temizle
   yesBtn.onclick = () => {
     overlay.classList.remove('active');
@@ -1159,7 +1170,7 @@ function showConfirm(message, onYes, onNo, yesText = "Evet", noText = "Hayır") 
 function updateMenuButtons() {
   const startBtn = document.getElementById('startBtn');
   const resumeBtn = document.getElementById('resumeBtn');
-  
+
   if (gameActive) {
     // Aktif oyun var: her iki butonu da göster
     if (resumeBtn) resumeBtn.style.display = '';
@@ -1169,7 +1180,7 @@ function updateMenuButtons() {
     if (resumeBtn) resumeBtn.style.display = 'none';
     if (startBtn) startBtn.style.display = '';
   }
-  
+
   // Best score güncelle
   const menuBestDisplay = document.getElementById('menuBestDisplay');
   if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
@@ -1204,7 +1215,7 @@ function checkMaintenance() {
             const overlay = document.getElementById('maintenanceOverlay');
             const msgText = document.getElementById('maintenanceMessageText');
             const timeText = document.getElementById('maintenanceEndTimeText');
-            
+
             if (msgText && data.maintenanceMessage) {
               msgText.textContent = data.maintenanceMessage;
             }
@@ -1232,7 +1243,7 @@ function initApp() {
     renderVersionDisplay();
 
     createParticles();
-    
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const downloadBtn = document.getElementById('downloadBtn');
     const mainMenuOverlay = document.getElementById('mainMenuOverlay');
@@ -1250,9 +1261,9 @@ function initApp() {
       try {
         const saved = JSON.parse(localStorage.getItem('cubex_gameState'));
         if (saved && saved.gameActive) gameActive = true;
-      } catch(e) {}
+      } catch (e) { }
     }
-    
+
     updateMenuButtons();
 
     // "Yeni Oyun" butonu — aktif oyun varsa onay sor
@@ -1351,18 +1362,18 @@ setTimeout(syncPendingScore, 2000);
 function createConfetti() {
   const container = document.body;
   const colors = ['#4f8ef7', '#a855f7', '#ec4899', '#06b6d4', '#22c55e', '#eab308'];
-  
+
   // Mobile optimization: fewer particles
   const isMobile = window.innerWidth < 600;
   const particleCount = isMobile ? 25 : 45;
-  
+
   for (let i = 0; i < particleCount; i++) {
     const confetti = document.createElement('div');
     confetti.className = 'confetti';
-    
+
     const size = Math.random() * 7 + 3;
     const color = colors[Math.floor(Math.random() * colors.length)];
-    
+
     confetti.style.width = size + 'px';
     confetti.style.height = size + 'px';
     confetti.style.backgroundColor = color;
@@ -1373,10 +1384,10 @@ function createConfetti() {
     confetti.style.zIndex = '2000';
     confetti.style.pointerEvents = 'none';
     confetti.style.willChange = 'transform, opacity';
-    
+
     const duration = Math.random() * 1.5 + 1.2;
     const drift = (Math.random() - 0.5) * 150;
-    
+
     if (confetti.animate) {
       confetti.animate([
         { transform: 'translate3d(0, 0, 0) rotate(0deg)', opacity: 1 },
@@ -1387,7 +1398,7 @@ function createConfetti() {
         fill: 'forwards'
       });
     }
-    
+
     container.appendChild(confetti);
     setTimeout(() => {
       if (confetti.parentNode) confetti.remove();
@@ -1426,25 +1437,25 @@ function setupLeaderboardObserver() {
   const container = document.getElementById('leaderboardList');
   const stickySelfRank = document.getElementById('stickySelfRank');
   const selfElement = document.getElementById('selfLeaderboardItem');
-  
+
   if (!container || !stickySelfRank) return;
-  
+
   if (leaderboardObserver) {
     leaderboardObserver.disconnect();
     leaderboardObserver = null;
   }
-  
+
   if (!window.selfRank) {
     stickySelfRank.style.display = 'none';
     return;
   }
-  
+
   if (selfElement) {
     const options = {
       root: container,
       threshold: 0.99
     };
-    
+
     leaderboardObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -1454,7 +1465,7 @@ function setupLeaderboardObserver() {
         }
       });
     }, options);
-    
+
     leaderboardObserver.observe(selfElement);
   } else {
     stickySelfRank.style.display = 'block';
@@ -1464,13 +1475,13 @@ function setupLeaderboardObserver() {
 function checkDeviceAndIpRegistration() {
   const localName = localStorage.getItem('cubex_playerName');
   const nameOverlay = document.getElementById('nameOverlay');
-  
+
   let deviceId = localStorage.getItem('cubex_deviceId');
   if (!deviceId) {
     deviceId = 'dev_' + Math.random().toString(36).substring(2) + '_' + Date.now();
     localStorage.setItem('cubex_deviceId', deviceId);
   }
-  
+
   return fetch('https://api.ipify.org?format=json')
     .then(res => res.json())
     .then(ipData => ipData.ip)
@@ -1480,7 +1491,7 @@ function checkDeviceAndIpRegistration() {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       };
-      
+
       if (localName) {
         // Migration: ensure device/IP is silently registered to the local account if not already done
         return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.device_ip:${encodeURIComponent(localName)}:%`, { headers })
@@ -1515,7 +1526,7 @@ function checkDeviceAndIpRegistration() {
           })
           .then(deviceMappings => {
             if (deviceMappings.length > 0) return deviceMappings;
-            
+
             if (ip !== 'no_ip') {
               return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.device_ip:%:%:${ip}&score=eq.-999`, { headers })
                 .then(res => {
@@ -1529,12 +1540,12 @@ function checkDeviceAndIpRegistration() {
             if (matchedMappings.length > 0) {
               const match = matchedMappings[0].name.split(':');
               const existingName = match[1];
-              
+
               showConfirm(
                 `Daha önce aynı IP veya cihaz üzerinden '${existingName}' kullanıcı adıyla oynadınız. Verileriniz eşitlensin mi?`,
                 () => {
                   localStorage.setItem('cubex_playerName', existingName);
-                  
+
                   // Fetch the high score
                   fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(existingName)}&select=score`, { headers })
                     .then(scoreRes => {
@@ -1590,7 +1601,7 @@ function generateAndRegisterAutoName(deviceId, ip) {
     'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`
   };
-  
+
   return fetch(`${SUPABASE_URL}/rest/v1/scores?select=name`, { headers })
     .then(res => {
       if (res.ok) return res.json();
@@ -1614,7 +1625,7 @@ function generateAndRegisterAutoName(deviceId, ip) {
     })
     .then(autoName => {
       localStorage.setItem('cubex_playerName', autoName);
-      
+
       const mappingKey = `device_ip:${autoName}:${deviceId}:${ip}`;
       return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
         method: 'POST',
@@ -1625,10 +1636,10 @@ function generateAndRegisterAutoName(deviceId, ip) {
         },
         body: JSON.stringify({ name: mappingKey, score: -999 })
       })
-      .then(() => {
-        alert(`Yeni hesabınız başarıyla oluşturuldu!\nKullanıcı Adınız: ${autoName}`);
-        checkNameCensorship();
-      });
+        .then(() => {
+          alert(`Yeni hesabınız başarıyla oluşturuldu!\nKullanıcı Adınız: ${autoName}`);
+          checkNameCensorship();
+        });
     });
 }
 
@@ -1646,13 +1657,13 @@ if (saveNameBtn && playerNameInput) {
         alert("Seçeceğiniz isim 'Oyuncu[Sayı]' formatında olamaz.");
         return;
       }
-      
+
       saveNameBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kontrol Ediliyor...';
       const headers = {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       };
-      
+
       fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, { headers })
         .then(res => {
           if (res.ok) return res.json();
@@ -1664,19 +1675,19 @@ if (saveNameBtn && playerNameInput) {
             saveNameBtn.innerHTML = '<i class="fas fa-check"></i> Kaydet';
             return;
           }
-          
+
           showConfirm(
             "Lütfen kullanıcı adınızda argo, küfür, aşağılayıcı ve ahlaka uygun olmayan diğer sözcükleri kullanmayın. Aksi takdirde hesabınız yasaklanabilir.",
             () => {
               localStorage.setItem('cubex_playerName', pName);
               nameOverlay.classList.remove('active');
-              
+
               let deviceId = localStorage.getItem('cubex_deviceId');
               if (!deviceId) {
                 deviceId = 'dev_' + Math.random().toString(36).substring(2) + '_' + Date.now();
                 localStorage.setItem('cubex_deviceId', deviceId);
               }
-              
+
               fetch('https://api.ipify.org?format=json')
                 .then(r => r.json())
                 .then(data => data.ip)
@@ -1757,14 +1768,14 @@ function censorRenameScore(oldName, newName) {
     alert("Lütfen geçerli bir yeni isim girin.");
     return Promise.resolve(false);
   }
-  
+
   if (/^Oyuncu\d+$/.test(newName)) {
     alert("Seçeceğiniz yeni isim 'Oyuncu[Sayı]' formatında olamaz.");
     return Promise.resolve(false);
   }
-  
+
   if (censorSaveBtn) censorSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Güncelleniyor...';
-  
+
   return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(oldName)}`, {
     method: 'PATCH',
     headers: {
@@ -1774,28 +1785,28 @@ function censorRenameScore(oldName, newName) {
     },
     body: JSON.stringify({ name: newName })
   })
-  .then(res => {
-    if (res.ok) {
-      localStorage.setItem('cubex_playerName', newName);
-      document.getElementById('censorRenameOverlay').classList.remove('active');
-      alert(`İsminiz başarıyla "${newName}" olarak güncellendi!`);
-      clearCensorNoteRow(); // Sansür notu satırını temizle
-      loadLeaderboard();
-      return true;
-    } else {
-      alert("İsim değiştirilemedi (Bu isim başkası tarafından kullanılıyor olabilir).");
+    .then(res => {
+      if (res.ok) {
+        localStorage.setItem('cubex_playerName', newName);
+        document.getElementById('censorRenameOverlay').classList.remove('active');
+        alert(`İsminiz başarıyla "${newName}" olarak güncellendi!`);
+        clearCensorNoteRow(); // Sansür notu satırını temizle
+        loadLeaderboard();
+        return true;
+      } else {
+        alert("İsim değiştirilemedi (Bu isim başkası tarafından kullanılıyor olabilir).");
+        return false;
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Ağ hatası oluştu.");
       return false;
-    }
-  })
-  .catch(err => {
-    console.error(err);
-    alert("Ağ hatası oluştu.");
-    return false;
-  })
-  .then(success => {
-    if (censorSaveBtn) censorSaveBtn.innerHTML = '<i class="fas fa-check"></i> Değiştir';
-    return success;
-  });
+    })
+    .then(success => {
+      if (censorSaveBtn) censorSaveBtn.innerHTML = '<i class="fas fa-check"></i> Değiştir';
+      return success;
+    });
 }
 
 function checkAndShowCensorNote(censoredName) {
@@ -1805,28 +1816,28 @@ function checkAndShowCensorNote(censoredName) {
       'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   })
-  .then(censorNoteRes => {
-    if (censorNoteRes.ok) {
-      return censorNoteRes.json().then(data => {
-        if (data && data.length > 0) {
-          const fullCensoredName = data[0].name;
-          const parts = fullCensoredName.split(':');
-          const note = parts.slice(2).join(':') || "";
-          
-          const noteTextEl = document.getElementById('censorNoteText');
-          if (noteTextEl && note) {
-            noteTextEl.textContent = `Kurucu Notu: "${note}"`;
-            noteTextEl.style.display = 'block';
-            // Not satırının adını elemente geçici olarak kaydedelim ki daha sonra silebilelim
-            noteTextEl.dataset.fullNoteName = fullCensoredName;
+    .then(censorNoteRes => {
+      if (censorNoteRes.ok) {
+        return censorNoteRes.json().then(data => {
+          if (data && data.length > 0) {
+            const fullCensoredName = data[0].name;
+            const parts = fullCensoredName.split(':');
+            const note = parts.slice(2).join(':') || "";
+
+            const noteTextEl = document.getElementById('censorNoteText');
+            if (noteTextEl && note) {
+              noteTextEl.textContent = `Kurucu Notu: "${note}"`;
+              noteTextEl.style.display = 'block';
+              // Not satırının adını elemente geçici olarak kaydedelim ki daha sonra silebilelim
+              noteTextEl.dataset.fullNoteName = fullCensoredName;
+            }
           }
-        }
-      });
-    }
-  })
-  .catch(err => {
-    console.error("Error fetching censor note:", err);
-  });
+        });
+      }
+    })
+    .catch(err => {
+      console.error("Error fetching censor note:", err);
+    });
 }
 
 function clearCensorNoteRow() {
@@ -1840,180 +1851,180 @@ function clearCensorNoteRow() {
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     })
-    .then(() => {
-      noteTextEl.dataset.fullNoteName = '';
-      noteTextEl.style.display = 'none';
-      noteTextEl.textContent = '';
-    })
-    .catch(e => {
-      console.error("Error deleting censor note row:", e);
-    });
+      .then(() => {
+        noteTextEl.dataset.fullNoteName = '';
+        noteTextEl.style.display = 'none';
+        noteTextEl.textContent = '';
+      })
+      .catch(e => {
+        console.error("Error deleting censor note row:", e);
+      });
   }
   return Promise.resolve();
 }
 
 function checkNameCensorship() {
   const localName = localStorage.getItem('cubex_playerName');
-  
+
   if (!localName) return;
-  
+
   if (/^Oyuncu\d+$/.test(localName)) {
     checkAndShowCensorNote(localName).then(() => {
       showCensorPrompt(localName);
     });
     return;
   }
-  
+
   fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.banned:${encodeURIComponent(localName)}:%25&select=name`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   })
-  .then(banRes => {
-    if (banRes.ok) {
-      return banRes.json().then(banData => {
-        if (banData && banData.length > 0) {
-          const banKey = banData[0].name;
-          const parts = banKey.split(':');
-          const expireVal = parts[2];
-          
-          let activeBan = false;
-          let banMessage = "";
-          
-          if (expireVal === 'forever') {
-            activeBan = true;
-            banMessage = "Kullanıcı adınız kurucu tarafından kalıcı olarak engellenmiştir! Liderlik tablosuna skor gönderemezsiniz.";
-          } else {
-            const expireTime = parseInt(expireVal || '0');
-            if (Date.now() < expireTime) {
+    .then(banRes => {
+      if (banRes.ok) {
+        return banRes.json().then(banData => {
+          if (banData && banData.length > 0) {
+            const banKey = banData[0].name;
+            const parts = banKey.split(':');
+            const expireVal = parts[2];
+
+            let activeBan = false;
+            let banMessage = "";
+
+            if (expireVal === 'forever') {
               activeBan = true;
-              const remainingDate = new Date(expireTime);
-              banMessage = `Kullanıcı adınız kurucu tarafından engellenmiştir!\nEngelleme Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
+              banMessage = "Kullanıcı adınız kurucu tarafından kalıcı olarak engellenmiştir! Liderlik tablosuna skor gönderemezsiniz.";
             } else {
-              // Ban süresi dolmuş, veritabanındaki ban satırını silelim
-              fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
-                method: 'DELETE',
-                headers: {
-                  'apikey': SUPABASE_KEY,
-                  'Authorization': `Bearer ${SUPABASE_KEY}`
-                }
-              }).catch(e => console.error(e));
-            }
-          }
-          
-          if (activeBan) {
-            alert(banMessage);
-            localStorage.removeItem('cubex_playerName');
-            localStorage.removeItem('cubex_lastSubmitted');
-            newGame();
-            return false;
-          }
-        }
-        return true;
-      });
-    }
-    return true;
-  })
-  .then(shouldContinue => {
-    if (!shouldContinue) return;
-    
-    // Kurucu tarafından silinme notu bırakılmış mı kontrol et (Oyun başında veya oyun içinde)
-    return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.deleted:${encodeURIComponent(localName)}:%25&select=name`, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    })
-    .then(delNoteRes => {
-      if (delNoteRes.ok) {
-        return delNoteRes.json().then(delNoteData => {
-          if (delNoteData && delNoteData.length > 0) {
-            const fullDeletedName = delNoteData[0].name;
-            const parts = fullDeletedName.split(':');
-            const note = parts.slice(2).join(':') || "Silinme notu bırakılmamış.";
-            
-            alert(`Skorunuz kurucu tarafından silindi!\nNot: ${note}\n\nOyununuz sıfırlanıyor...`);
-            
-            // Silinme notu satırını veritabanından temizle
-            fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(fullDeletedName)}`, {
-              method: 'DELETE',
-              headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
+              const expireTime = parseInt(expireVal || '0');
+              if (Date.now() < expireTime) {
+                activeBan = true;
+                const remainingDate = new Date(expireTime);
+                banMessage = `Kullanıcı adınız kurucu tarafından engellenmiştir!\nEngelleme Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
+              } else {
+                // Ban süresi dolmuş, veritabanındaki ban satırını silelim
+                fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                  }
+                }).catch(e => console.error(e));
               }
-            })
-            .then(() => {
-              // Yerel ismi ve skoru temizle, oyunu sıfırla
+            }
+
+            if (activeBan) {
+              alert(banMessage);
               localStorage.removeItem('cubex_playerName');
               localStorage.removeItem('cubex_lastSubmitted');
               newGame();
-            })
-            .catch(e => console.error(e));
-            
-            return false;
+              return false;
+            }
           }
           return true;
         });
       }
       return true;
-    });
-  })
-  .then(shouldContinue => {
-    if (!shouldContinue) return;
-    
-    // Oyun esnasında aktif skor gönderildikten sonra tablodan silinme kontrolü
-    if (score >= 1000 && hasSubmittedThisGame) {
-      return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(localName)}&select=score`, {
+    })
+    .then(shouldContinue => {
+      if (!shouldContinue) return;
+
+      // Kurucu tarafından silinme notu bırakılmış mı kontrol et (Oyun başında veya oyun içinde)
+      return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.deleted:${encodeURIComponent(localName)}:%25&select=name`, {
         headers: {
           'apikey': SUPABASE_KEY,
           'Authorization': `Bearer ${SUPABASE_KEY}`
         }
       })
-      .then(res => {
-        if (res.ok) {
-          return res.json().then(data => {
-            if (data.length === 0) {
-              // Kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
-              return fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu%25&select=name`, {
-                headers: {
-                  'apikey': SUPABASE_KEY,
-                  'Authorization': `Bearer ${SUPABASE_KEY}`
-                }
-              })
-              .then(censorRes => {
-                if (censorRes.ok) {
-                  return censorRes.json().then(censorData => {
-                    if (censorData && censorData.length > 0) {
-                      const newName = censorData[0].name;
-                      localStorage.setItem('cubex_playerName', newName);
-                      checkAndShowCensorNote(newName).then(() => {
-                        showCensorPrompt(newName);
-                      });
-                      return false;
+        .then(delNoteRes => {
+          if (delNoteRes.ok) {
+            return delNoteRes.json().then(delNoteData => {
+              if (delNoteData && delNoteData.length > 0) {
+                const fullDeletedName = delNoteData[0].name;
+                const parts = fullDeletedName.split(':');
+                const note = parts.slice(2).join(':') || "Silinme notu bırakılmamış.";
+
+                alert(`Skorunuz kurucu tarafından silindi!\nNot: ${note}\n\nOyununuz sıfırlanıyor...`);
+
+                // Silinme notu satırını veritabanından temizle
+                fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(fullDeletedName)}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                  }
+                })
+                  .then(() => {
+                    // Yerel ismi ve skoru temizle, oyunu sıfırla
+                    localStorage.removeItem('cubex_playerName');
+                    localStorage.removeItem('cubex_lastSubmitted');
+                    newGame();
+                  })
+                  .catch(e => console.error(e));
+
+                return false;
+              }
+              return true;
+            });
+          }
+          return true;
+        });
+    })
+    .then(shouldContinue => {
+      if (!shouldContinue) return;
+
+      // Oyun esnasında aktif skor gönderildikten sonra tablodan silinme kontrolü
+      if (score >= 1000 && hasSubmittedThisGame) {
+        return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(localName)}&select=score`, {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        })
+          .then(res => {
+            if (res.ok) {
+              return res.json().then(data => {
+                if (data.length === 0) {
+                  // Kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
+                  return fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu%25&select=name`, {
+                    headers: {
+                      'apikey': SUPABASE_KEY,
+                      'Authorization': `Bearer ${SUPABASE_KEY}`
                     }
-                    return true;
-                  });
+                  })
+                    .then(censorRes => {
+                      if (censorRes.ok) {
+                        return censorRes.json().then(censorData => {
+                          if (censorData && censorData.length > 0) {
+                            const newName = censorData[0].name;
+                            localStorage.setItem('cubex_playerName', newName);
+                            checkAndShowCensorNote(newName).then(() => {
+                              showCensorPrompt(newName);
+                            });
+                            return false;
+                          }
+                          return true;
+                        });
+                      }
+                      return true;
+                    })
+                    .then(censorContinue => {
+                      if (!censorContinue) return;
+                      // Silinme notu bulunamadıysa ama satır silindiyse varsayılan uyarıyı göster
+                      alert("Skorunuz kurucu tarafından silindi! Oyununuz sıfırlanıyor...");
+                      localStorage.removeItem('cubex_playerName');
+                      localStorage.removeItem('cubex_lastSubmitted');
+                      newGame();
+                    });
                 }
-                return true;
-              })
-              .then(censorContinue => {
-                if (!censorContinue) return;
-                // Silinme notu bulunamadıysa ama satır silindiyse varsayılan uyarıyı göster
-                alert("Skorunuz kurucu tarafından silindi! Oyununuz sıfırlanıyor...");
-                localStorage.removeItem('cubex_playerName');
-                localStorage.removeItem('cubex_lastSubmitted');
-                newGame();
               });
             }
           });
-        }
-      });
-    }
-  })
-  .catch(err => {
-    console.error("Censorship/Deletion check error:", err);
-  });
+      }
+    })
+    .catch(err => {
+      console.error("Censorship/Deletion check error:", err);
+    });
 }
 
 function showCensorPrompt(censoredName) {
@@ -2030,12 +2041,12 @@ function updateScoreProgress() {
   const progressLabel = document.getElementById('progressLabel');
   const progressValue = document.getElementById('progressValue');
   const progressBarFill = document.getElementById('progressBarFill');
-  
+
   if (!progressContainer || !progressLabel || !progressValue || !progressBarFill) return;
-  
+
   const currentScore = score;
   const currentBest = bestScore || 0;
-  
+
   if (currentScore < 1000) {
     progressLabel.textContent = "Liderlik Tablosu Barajı";
     progressValue.textContent = `${currentScore} / 1000`;
@@ -2049,7 +2060,7 @@ function updateScoreProgress() {
     } else {
       progressLabel.textContent = "Kişisel Rekor Hedefi";
     }
-    
+
     progressValue.textContent = `${currentScore} / ${target}`;
     const pct = Math.min(100, (currentScore / target) * 100);
     progressBarFill.style.width = `${pct}%`;
@@ -2068,81 +2079,85 @@ function submitScore(pName, finalScore, silent = false) {
       'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   })
-  .then(banRes => {
-    if (banRes.ok) {
-      return banRes.json().then(banData => {
-        if (banData && banData.length > 0) {
-          const banKey = banData[0].name;
-          const parts = banKey.split(':');
-          const expireVal = parts[2];
-          
-          let activeBan = false;
-          let banMessage = "";
-          
-          if (expireVal === 'forever') {
-            activeBan = true;
-            banMessage = "Liderlik tablosuna girişiniz kurucu tarafından kalıcı olarak engellenmiştir!";
-          } else {
-            const expireTime = parseInt(expireVal || '0');
-            if (Date.now() < expireTime) {
+    .then(banRes => {
+      if (banRes.ok) {
+        return banRes.json().then(banData => {
+          if (banData && banData.length > 0) {
+            const banKey = banData[0].name;
+            const parts = banKey.split(':');
+            const expireVal = parts[2];
+
+            let activeBan = false;
+            let banMessage = "";
+
+            if (expireVal === 'forever') {
               activeBan = true;
-              const remainingDate = new Date(expireTime);
-              banMessage = `Liderlik tablosuna girişiniz kurucu tarafından engellenmiştir!\nBan Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
+              banMessage = "Liderlik tablosuna girişiniz kurucu tarafından kalıcı olarak engellenmiştir!";
             } else {
-              // Ban süresi dolmuş, veritabanındaki ban satırını silelim
-              fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
-                method: 'DELETE',
-                headers: {
-                  'apikey': SUPABASE_KEY,
-                  'Authorization': `Bearer ${SUPABASE_KEY}`
-                }
-              }).catch(e => console.error(e));
+              const expireTime = parseInt(expireVal || '0');
+              if (Date.now() < expireTime) {
+                activeBan = true;
+                const remainingDate = new Date(expireTime);
+                banMessage = `Liderlik tablosuna girişiniz kurucu tarafından engellenmiştir!\nBan Bitiş Süresi: ${remainingDate.toLocaleString('tr-TR')}`;
+              } else {
+                // Ban süresi dolmuş, veritabanındaki ban satırını silelim
+                fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banKey)}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                  }
+                }).catch(e => console.error(e));
+              }
+            }
+
+            if (activeBan) {
+              if (!silent) alert(banMessage);
+              localStorage.removeItem('cubex_playerName');
+              localStorage.removeItem('cubex_lastSubmitted');
+              newGame();
+              return false;
             }
           }
-          
-          if (activeBan) {
-            if (!silent) alert(banMessage);
-            localStorage.removeItem('cubex_playerName');
-            localStorage.removeItem('cubex_lastSubmitted');
-            newGame();
-            return false;
-          }
-        }
-        return true;
-      });
-    }
-    return true;
-  })
-    // Kullanıcının her zaman "o anki (aktif) oyun puanı" veri tabanına işlenecek
-    // Tek ve güçlü bir UPSERT (POST + merge-duplicates) isteği atarak hem ağı yormuyoruz hem de varsa doğrudan eziyoruz
-    return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({ name: pName, score: finalScore })
-    })
-    .then(res => {
-      if (res.ok) {
-        localStorage.setItem('cubex_lastSubmitted', finalScore);
-        console.log(`Skor Supabase'e başarıyla güncellendi (UPSERT): ${finalScore}`);
-        hasSubmittedThisGame = true;
-        return true;
-      } else {
-        return res.text().then(errText => {
-          console.error("Supabase UPSERT Hatası:", errText);
-          if (!silent) alert("Veritabanı Hatası: " + errText);
-          return false;
+          return true;
         });
       }
+      return true;
     })
-    .catch(e => {
-      console.error("Skor yüklenemedi", e);
-      if (!silent) alert("Bağlantı hatası: " + e.message);
-      return false;
+    .then(allowed => {
+      if (!allowed) return false;
+
+      // Kullanıcının her zaman "o anki (aktif) oyun puanı" veri tabanına işlenecek
+      // Tek ve güçlü bir UPSERT (POST + merge-duplicates) isteği atarak hem ağı yormuyoruz hem de varsa doğrudan eziyoruz
+      return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({ name: pName, score: finalScore })
+      })
+        .then(res => {
+          if (res.ok) {
+            localStorage.setItem('cubex_lastSubmitted', finalScore);
+            console.log(`Skor Supabase'e başarıyla güncellendi (UPSERT): ${finalScore}`);
+            hasSubmittedThisGame = true;
+            return true;
+          } else {
+            return res.text().then(errText => {
+              console.error("Supabase UPSERT Hatası:", errText);
+              if (!silent) alert("Veritabanı Hatası: " + errText);
+              return false;
+            });
+          }
+        })
+        .catch(e => {
+          console.error("Skor yüklenemedi", e);
+          if (!silent) alert("Bağlantı hatası: " + e.message);
+          return false;
+        });
     });
 }
 
@@ -2155,123 +2170,123 @@ function deleteActiveScore(pName) {
       'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   })
-  .then(res => {
-    if (res.ok) {
-      console.log(`"${pName}" adlı oyuncunun aktif skoru veritabanından silindi.`);
-    }
-  })
-  .catch(e => {
-    console.error("Skor silinirken hata oluştu:", e);
-  });
+    .then(res => {
+      if (res.ok) {
+        console.log(`"${pName}" adlı oyuncunun aktif skoru veritabanından silindi.`);
+      }
+    })
+    .catch(e => {
+      console.error("Skor silinirken hata oluştu:", e);
+    });
 }
 
 function loadLeaderboard() {
   if (!leaderboardList) return;
-  
+
   leaderboardList.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
   const stickySelfRank = document.getElementById('stickySelfRank');
   if (stickySelfRank) stickySelfRank.style.display = 'none';
   window.selfRank = null;
-  
+
   fetch(`${SUPABASE_URL}/rest/v1/scores?score=gte.1000&select=name,score&order=score.desc&limit=25`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   })
-  .then(res => {
-    if (!res.ok) throw new Error("API Hatası");
-    return res.json();
-  })
-  .then(data => {
-    leaderboardList.innerHTML = '';
-    
-    if (data.length === 0) {
-      leaderboardList.innerHTML = '<div class="leaderboard-loading">Henüz hiç skor yok! İlk sen ol!</div>';
-      return;
-    }
-    
-    const playerName = localStorage.getItem('cubex_playerName');
-    
-    data.forEach((itemData, index) => {
-      const rank = index + 1;
-      let rankClass = '';
-      if (rank === 1) rankClass = 'top-1';
-      else if (rank === 2) rankClass = 'top-2';
-      else if (rank === 3) rankClass = 'top-3';
-      
-      const isSelf = itemData.name === playerName;
-      if (isSelf) {
-        rankClass += ' is-self';
+    .then(res => {
+      if (!res.ok) throw new Error("API Hatası");
+      return res.json();
+    })
+    .then(data => {
+      leaderboardList.innerHTML = '';
+
+      if (data.length === 0) {
+        leaderboardList.innerHTML = '<div class="leaderboard-loading">Henüz hiç skor yok! İlk sen ol!</div>';
+        return;
       }
-      
-      const item = document.createElement('div');
-      item.className = `lb-item ${rankClass}`;
-      if (isSelf) {
-        item.id = 'selfLeaderboardItem';
-      }
-      item.innerHTML = `
+
+      const playerName = localStorage.getItem('cubex_playerName');
+
+      data.forEach((itemData, index) => {
+        const rank = index + 1;
+        let rankClass = '';
+        if (rank === 1) rankClass = 'top-1';
+        else if (rank === 2) rankClass = 'top-2';
+        else if (rank === 3) rankClass = 'top-3';
+
+        const isSelf = itemData.name === playerName;
+        if (isSelf) {
+          rankClass += ' is-self';
+        }
+
+        const item = document.createElement('div');
+        item.className = `lb-item ${rankClass}`;
+        if (isSelf) {
+          item.id = 'selfLeaderboardItem';
+        }
+        item.innerHTML = `
         <span class="lb-rank">${rank}</span>
         <span class="lb-name">${itemData.name}</span>
         <span class="lb-score">${itemData.score}</span>
       `;
-      leaderboardList.appendChild(item);
-    });
+        leaderboardList.appendChild(item);
+      });
 
-    // Kendi sıralamamızı veritabanından çekelim
-    if (playerName) {
-      fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(playerName)}&select=score`, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      })
-      .then(selfRes => {
-        if (selfRes.ok) {
-          return selfRes.json().then(selfData => {
-            if (selfData && selfData.length > 0) {
-              const selfScore = selfData[0].score;
-              return fetch(`${SUPABASE_URL}/rest/v1/scores?score=gt.${selfScore}&select=count`, {
-                headers: {
-                  'apikey': SUPABASE_KEY,
-                  'Authorization': `Bearer ${SUPABASE_KEY}`,
-                  'Prefer': 'count=exact'
-                }
-              })
-              .then(countRes => {
-                let selfRank = 1;
-                if (countRes.ok) {
-                  const contentRange = countRes.headers.get('content-range');
-                  if (contentRange) {
-                    const countMatch = contentRange.match(/\/(\d+)/);
-                    if (countMatch) {
-                      selfRank = parseInt(countMatch[1]) + 1;
+      // Kendi sıralamamızı veritabanından çekelim
+      if (playerName) {
+        fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(playerName)}&select=score`, {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        })
+          .then(selfRes => {
+            if (selfRes.ok) {
+              return selfRes.json().then(selfData => {
+                if (selfData && selfData.length > 0) {
+                  const selfScore = selfData[0].score;
+                  return fetch(`${SUPABASE_URL}/rest/v1/scores?score=gt.${selfScore}&select=count`, {
+                    headers: {
+                      'apikey': SUPABASE_KEY,
+                      'Authorization': `Bearer ${SUPABASE_KEY}`,
+                      'Prefer': 'count=exact'
                     }
-                  }
+                  })
+                    .then(countRes => {
+                      let selfRank = 1;
+                      if (countRes.ok) {
+                        const contentRange = countRes.headers.get('content-range');
+                        if (contentRange) {
+                          const countMatch = contentRange.match(/\/(\d+)/);
+                          if (countMatch) {
+                            selfRank = parseInt(countMatch[1]) + 1;
+                          }
+                        }
+                      }
+
+                      document.getElementById('selfRankNum').textContent = `#${selfRank}`;
+                      document.getElementById('selfRankNameText').textContent = playerName;
+                      document.getElementById('selfRankScoreText').textContent = `${selfScore} Puan`;
+                      window.selfRank = selfRank;
+
+                      setupLeaderboardObserver();
+                    });
                 }
-                
-                document.getElementById('selfRankNum').textContent = `#${selfRank}`;
-                document.getElementById('selfRankNameText').textContent = playerName;
-                document.getElementById('selfRankScoreText').textContent = `${selfScore} Puan`;
-                window.selfRank = selfRank;
-                
-                setupLeaderboardObserver();
               });
             }
+          })
+          .catch(selfErr => {
+            console.error(selfErr);
           });
-        }
-      })
-      .catch(selfErr => {
-        console.error(selfErr);
-      });
-    } else {
-      setupLeaderboardObserver();
-    }
-  })
-  .catch(e => {
-    console.error(e);
-    leaderboardList.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
-  });
+      } else {
+        setupLeaderboardObserver();
+      }
+    })
+    .catch(e => {
+      console.error(e);
+      leaderboardList.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
+    });
 }
 
 // ---- Cheat Mode Logic ----
@@ -2287,7 +2302,7 @@ let maintenanceBypassed = false;
 function handleCheatTap(clientX, clientY) {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  
+
   // Right Top Corner (80x80px)
   const isTopRight = clientX > w - 80 && clientY < 80;
   // Left Bottom Corner (80x80px)
@@ -2316,7 +2331,7 @@ function handleCheatTap(clientX, clientY) {
 }
 
 document.addEventListener('touchstart', (e) => {
-  if(e.touches.length > 0) {
+  if (e.touches.length > 0) {
     handleCheatTap(e.touches[0].clientX, e.touches[0].clientY);
   }
 });
@@ -2347,13 +2362,13 @@ if (cheatSubmit && cheatCancel && cheatInput) {
       cheatUsedInThisGame = true;
       document.getElementById('cheatOverlay').classList.remove('active');
       cheatInput.value = '';
-      
+
       const cheatIcon = document.getElementById('cheatActiveIcon');
       if (cheatIcon) cheatIcon.style.setProperty('display', 'flex', 'important');
-      
+
       // Hile Aktif: Tahtaya tıklayınca blokları silme özelliği
       alert("Geliştirici Modu Aktif!\nArtık tahtadaki herhangi bir bloğa tıklayarak onu yok edebilirsin!");
-      
+
     } else if (code === 'XeV!r@d0_') {
       if (maintenanceActiveAtStart && !maintenanceBypassed) {
         // İlk defa bakım varken yazıldıysa: Bakımı atlat/gizle
@@ -2392,12 +2407,12 @@ if (adminAddScoreBtn) {
     sfxClick();
     const nameInput = document.getElementById('adminScoreName').value.trim();
     const valInput = parseInt(document.getElementById('adminScoreValue').value);
-    
+
     if (!nameInput || isNaN(valInput)) {
       alert("Lütfen geçerli bir isim ve puan girin.");
       return;
     }
-    
+
     adminAddScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
     submitScore(nameInput, valInput).then(success => {
       adminAddScoreBtn.innerHTML = '<i class="fas fa-upload"></i> Skoru Yükle';
@@ -2413,12 +2428,12 @@ if (adminDeleteScoreBtn) {
     sfxClick();
     const nameInput = document.getElementById('adminDeleteName').value.trim();
     const noteInput = document.getElementById('adminDeleteNote').value.trim();
-    
+
     if (!nameInput) {
       alert("Silinecek ismi yazmalısın.");
       return;
     }
-    
+
     if (confirm(`"${nameInput}" isimli oyuncunun skorunu kalıcı olarak silmek istediğine emin misin?`)) {
       adminDeleteScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Siliniyor...';
       fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(nameInput)}`, {
@@ -2428,36 +2443,36 @@ if (adminDeleteScoreBtn) {
           'Authorization': `Bearer ${SUPABASE_KEY}`
         }
       })
-      .then(res => {
-        if (res.ok) {
-          // Silme notunu veritabanına özel satır olarak ekle
-          const finalNote = noteInput || "Skorunuz kurucu tarafından silindi.";
-          const noteKey = `deleted:${nameInput}:${finalNote}`;
-          
-          return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'resolution=merge-duplicates'
-            },
-            body: JSON.stringify({ name: noteKey, score: -999 })
-          }).then(() => {
-            alert(`Silme başarılı ve silinme notu kaydedildi.`);
-            document.getElementById('adminDeleteName').value = '';
-            document.getElementById('adminDeleteNote').value = '';
-          });
-        } else {
-          alert("Silinirken bir hata oluştu.");
-        }
-      })
-      .catch(() => {
-        alert("Ağ hatası.");
-      })
-      .then(() => {
-        adminDeleteScoreBtn.innerHTML = '<i class="fas fa-trash"></i> Skoru Veritabanından Sil';
-      });
+        .then(res => {
+          if (res.ok) {
+            // Silme notunu veritabanına özel satır olarak ekle
+            const finalNote = noteInput || "Skorunuz kurucu tarafından silindi.";
+            const noteKey = `deleted:${nameInput}:${finalNote}`;
+
+            return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates'
+              },
+              body: JSON.stringify({ name: noteKey, score: -999 })
+            }).then(() => {
+              alert(`Silme başarılı ve silinme notu kaydedildi.`);
+              document.getElementById('adminDeleteName').value = '';
+              document.getElementById('adminDeleteNote').value = '';
+            });
+          } else {
+            alert("Silinirken bir hata oluştu.");
+          }
+        })
+        .catch(() => {
+          alert("Ağ hatası.");
+        })
+        .then(() => {
+          adminDeleteScoreBtn.innerHTML = '<i class="fas fa-trash"></i> Skoru Veritabanından Sil';
+        });
     }
   });
 }
@@ -2468,14 +2483,14 @@ if (adminCensorBtn) {
     sfxClick();
     const badName = document.getElementById('adminCensorName').value.trim();
     const noteInput = document.getElementById('adminCensorNote').value.trim();
-    
+
     if (!badName) {
       alert("Sansürlenecek ismi girmelisiniz.");
       return;
     }
-    
+
     adminCensorBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sansürleniyor...';
-    
+
     // 1. Veritabanından tüm isimleri çekip boştaki ilk OyuncuX sayısını bulalım
     fetch(`${SUPABASE_URL}/rest/v1/scores?select=name`, {
       headers: {
@@ -2483,68 +2498,68 @@ if (adminCensorBtn) {
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     })
-    .then(listRes => {
-      if (listRes.ok) {
-        return listRes.json();
-      }
-      throw new Error("Liderlik tablosu listesi alınamadı");
-    })
-    .then(listData => {
-      let x = 1;
-      const names = listData.map(d => d.name);
-      const nums = [];
-      names.forEach(n => {
-        const m = n.match(/^Oyuncu(\d+)$/);
-        if (m) nums.push(parseInt(m[1]));
-      });
-      while (nums.includes(x)) {
-        x++;
-      }
-      
-      const newCensoredName = `Oyuncu${x}`;
-      
-      // 2. Veritabanındaki ismi güncelle (PATCH)
-      return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(badName)}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: newCensoredName })
-      }).then(updateRes => {
-        if (updateRes.ok) {
-          // Sansür notunu veritabanına özel satır olarak ekle
-          const finalNote = noteInput || "Uygunsuz isim kullanımı.";
-          const noteKey = `censored:${newCensoredName}:${finalNote}`;
-          
-          return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'resolution=merge-duplicates'
-            },
-            body: JSON.stringify({ name: noteKey, score: -999 })
-          }).then(() => {
-            alert(`"${badName}" isimli oyuncunun adı başarıyla "${newCensoredName}" olarak sansürlendi ve notu kaydedildi.`);
-            document.getElementById('adminCensorName').value = '';
-            document.getElementById('adminCensorNote').value = '';
-            loadLeaderboard(); // Liderlik tablosunu yenile
-          });
-        } else {
-          alert("İsim sansürlenirken veritabanı hatası oluştu (İsim bulunamamış olabilir).");
+      .then(listRes => {
+        if (listRes.ok) {
+          return listRes.json();
         }
+        throw new Error("Liderlik tablosu listesi alınamadı");
+      })
+      .then(listData => {
+        let x = 1;
+        const names = listData.map(d => d.name);
+        const nums = [];
+        names.forEach(n => {
+          const m = n.match(/^Oyuncu(\d+)$/);
+          if (m) nums.push(parseInt(m[1]));
+        });
+        while (nums.includes(x)) {
+          x++;
+        }
+
+        const newCensoredName = `Oyuncu${x}`;
+
+        // 2. Veritabanındaki ismi güncelle (PATCH)
+        return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(badName)}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: newCensoredName })
+        }).then(updateRes => {
+          if (updateRes.ok) {
+            // Sansür notunu veritabanına özel satır olarak ekle
+            const finalNote = noteInput || "Uygunsuz isim kullanımı.";
+            const noteKey = `censored:${newCensoredName}:${finalNote}`;
+
+            return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates'
+              },
+              body: JSON.stringify({ name: noteKey, score: -999 })
+            }).then(() => {
+              alert(`"${badName}" isimli oyuncunun adı başarıyla "${newCensoredName}" olarak sansürlendi ve notu kaydedildi.`);
+              document.getElementById('adminCensorName').value = '';
+              document.getElementById('adminCensorNote').value = '';
+              loadLeaderboard(); // Liderlik tablosunu yenile
+            });
+          } else {
+            alert("İsim sansürlenirken veritabanı hatası oluştu (İsim bulunamamış olabilir).");
+          }
+        });
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Ağ veya veritabanı hatası oluştu.");
+      })
+      .then(() => {
+        adminCensorBtn.innerHTML = '<i class="fas fa-ban"></i> İsmi \'Oyuncu[X]\' Yap';
       });
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Ağ veya veritabanı hatası oluştu.");
-    })
-    .then(() => {
-      adminCensorBtn.innerHTML = '<i class="fas fa-ban"></i> İsmi \'Oyuncu[X]\' Yap';
-    });
   });
 }
 
@@ -2554,12 +2569,12 @@ if (adminBanBtn) {
     sfxClick();
     const banName = document.getElementById('adminBanName').value.trim();
     const duration = document.getElementById('adminBanDuration').value;
-    
+
     if (!banName) {
       alert("Engellenecek oyuncu ismini girmelisiniz.");
       return;
     }
-    
+
     let confirmMsg = `"${banName}" isimli oyuncuyu `;
     if (duration === 'forever') {
       confirmMsg += "kalıcı (süresiz) olarak";
@@ -2567,10 +2582,10 @@ if (adminBanBtn) {
       confirmMsg += `${duration} gün boyunca`;
     }
     confirmMsg += " engellemek istediğinize emin misiniz?";
-    
+
     if (confirm(confirmMsg)) {
       adminBanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Engelleniyor...';
-      
+
       // 1. Önce veritabanındaki aktif skorunu sil
       fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(banName)}`, {
         method: 'DELETE',
@@ -2579,45 +2594,45 @@ if (adminBanBtn) {
           'Authorization': `Bearer ${SUPABASE_KEY}`
         }
       })
-      .then(() => {
-        // 2. Ban bitiş süresini hesapla
-        let expireTime;
-        if (duration === 'forever') {
-          expireTime = 'forever';
-        } else {
-          const days = parseInt(duration);
-          expireTime = Date.now() + days * 24 * 60 * 60 * 1000;
-        }
-        
-        // 3. Ban kaydını özel satır olarak veritabanına ekle
-        const banKey = `banned:${banName}:${expireTime}`;
-        return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify({ name: banKey, score: -999 })
+        .then(() => {
+          // 2. Ban bitiş süresini hesapla
+          let expireTime;
+          if (duration === 'forever') {
+            expireTime = 'forever';
+          } else {
+            const days = parseInt(duration);
+            expireTime = Date.now() + days * 24 * 60 * 60 * 1000;
+          }
+
+          // 3. Ban kaydını özel satır olarak veritabanına ekle
+          const banKey = `banned:${banName}:${expireTime}`;
+          return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify({ name: banKey, score: -999 })
+          });
+        })
+        .then(banRes => {
+          if (banRes.ok) {
+            alert(`"${banName}" isimli oyuncu başarıyla engellendi (banlandı) ve skoru silindi.`);
+            document.getElementById('adminBanName').value = '';
+            loadLeaderboard(); // Liderlik tablosunu yenile
+          } else {
+            alert("Engelleme kaydedilirken veritabanı hatası oluştu.");
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Ağ hatası oluştu.");
+        })
+        .then(() => {
+          adminBanBtn.innerHTML = '<i class="fas fa-gavel"></i> Oyuncuyu Engelle (Banla)';
         });
-      })
-      .then(banRes => {
-        if (banRes.ok) {
-          alert(`"${banName}" isimli oyuncu başarıyla engellendi (banlandı) ve skoru silindi.`);
-          document.getElementById('adminBanName').value = '';
-          loadLeaderboard(); // Liderlik tablosunu yenile
-        } else {
-          alert("Engelleme kaydedilirken veritabanı hatası oluştu.");
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Ağ hatası oluştu.");
-      })
-      .then(() => {
-        adminBanBtn.innerHTML = '<i class="fas fa-gavel"></i> Oyuncuyu Engelle (Banla)';
-      });
     }
   });
 }
@@ -2656,7 +2671,7 @@ if (cheatInfoCloseBtn) {
 boardEl.addEventListener('mousedown', handleBoardClickForCheat);
 boardEl.addEventListener('touchstart', (e) => {
   if (e.touches.length > 0) handleBoardClickForCheat(e.touches[0]);
-}, {passive: false});
+}, { passive: false });
 
 function handleBoardClickForCheat(e) {
   if (!cheatMode) return;
