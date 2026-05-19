@@ -605,7 +605,7 @@ function addScore(pts) {
       if (scoreDiff >= 250 || (now - lastSubmitTime > 15000 && scoreDiff > 0)) {
         lastSubmitTime = now;
         lastSubmittedScoreVal = score;
-        submitScore(pName, Math.max(score, bestScore), true);
+        submitScore(pName, score, true);
       }
     } else {
       const nameOverlay = document.getElementById('nameOverlay');
@@ -950,11 +950,11 @@ function gameOver() {
     
     gameOverOverlay.classList.add('active');
     
-    // Oyun bittiğinde final yüksek skorunu Supabase'e yükle (Garanti senkronizasyon)
+    // Oyun bittiğinde final skorunu Supabase'e yükle (Garanti senkronizasyon)
     if (score >= 1000) {
       const pName = localStorage.getItem('cubex_playerName');
       if (pName) {
-        submitScore(pName, Math.max(score, bestScore), true);
+        submitScore(pName, score, true);
       }
     }
   }
