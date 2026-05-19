@@ -2129,8 +2129,12 @@ function submitScore(pName, finalScore, silent = false) {
               hasSubmittedThisGame = true; // Zaten veritabanında daha iyi bir skoru var, işaretle
               return true;
             }
+            // Skor yüksek, güncelle (PATCH)
+            return performPatch();
+          } else {
+            // Kayıt yok, oluştur (POST)
+            return performPost();
           }
-          return performPost();
         });
       }
       return performPost();
@@ -2147,25 +2151,50 @@ function submitScore(pName, finalScore, silent = false) {
   });
 
   function performPost() {
-    return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+    return fetch(`${SUPABASE_URL}/rest/v1/scores`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ name: pName, score: finalScore })
     })
     .then(res => {
       if (res.ok) {
         localStorage.setItem('cubex_lastSubmitted', finalScore);
-        console.log("Skor Supabase'e başarıyla kaydedildi.");
+        console.log("Skor Supabase'e başarıyla kaydedildi (POST).");
         hasSubmittedThisGame = true; // Yükleme başarılı, işaretle
         return true;
       } else {
         return res.text().then(errText => {
-          console.error("Supabase Hatası:", errText);
+          console.error("Supabase Hatası (POST):", errText);
+          if (!silent) alert("Veritabanı Hatası: " + errText);
+          return false;
+        });
+      }
+    });
+  }
+
+  function performPatch() {
+    return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ score: finalScore })
+    })
+    .then(res => {
+      if (res.ok) {
+        localStorage.setItem('cubex_lastSubmitted', finalScore);
+        console.log("Skor Supabase'e başarıyla güncellendi (PATCH).");
+        hasSubmittedThisGame = true; // Yükleme başarılı, işaretle
+        return true;
+      } else {
+        return res.text().then(errText => {
+          console.error("Supabase Hatası (PATCH):", errText);
           if (!silent) alert("Veritabanı Hatası: " + errText);
           return false;
         });
