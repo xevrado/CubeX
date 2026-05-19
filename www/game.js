@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.4.10.0"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.5.1.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -426,8 +426,8 @@ function generatePieces() {
   const emptyCellsCount = board.flat().filter(cell => cell === null).length;
   const filledCellsCount = BOARD_SIZE * BOARD_SIZE - emptyCellsCount;
   
-  // %15'ten az doluluk durumunu kontrol et (64 hücre * 0.15 = 9.6 -> <= 9 dolu hücre)
-  const isLowFullness = (filledCellsCount > 0 && filledCellsCount <= 9);
+  // Tahtadaki blokları tamamen temizleme (Perfect Clear) şansını arttırmak için eşiği 15'e çıkardık
+  const isLowFullness = (filledCellsCount > 0 && filledCellsCount <= 15);
 
   // Her şekil için bir ağırlık hesapla
   const shapeWeights = SHAPES.map(shape => {
@@ -438,38 +438,53 @@ function generatePieces() {
     const normalizedShape = normalizeCells(shape.cells);
     const shapeKey = normalizedShape.map(c => c.join(',')).sort().join('|');
 
-    if (isLowFullness) {
-      // DÜŞÜK DOLULUK MODU (%15'ten az doluluk): Blokların tamamen temizlenebilmesi ve
-      // Perfect Clear şansı için çizgisel ve köşesel parça gelme olasılığını devasa arttır
-      if (['1x1', '1x2', '2x1', '1x3', '3x1', '1x4', '4x1', 'Corner1', 'Corner2', 'Corner3', 'Corner4'].includes(shape.name)) {
-        weight *= 4.0;
-      } else {
-        weight *= 0.1; // Hantal/büyük parçaların gelme ihtimalini azalt
-      }
-    } else {
-      // NORMAL VEYA SIKIŞIK MOD: Zorluk dengesini koru (sonsuz 1x1 döngüsü olmaması için)
-      if (emptyCellsCount < 10) {
-        // Çok sıkışık: Boyutu 5 ve üzeri olanları engelle, 4'lüklerin olasılığını azalt (böylece elenme riski devam eder)
-        if (shape.cells.length >= 5) return 0;
-        if (shape.cells.length === 4) weight *= 0.25;
-      } else if (emptyCellsCount < 18) {
-        // Sıkışık: Boyutu 5 ve üzeri olanları hafifçe sınırla, 4'lükleri daha serbest bırak
-        if (shape.cells.length >= 5) weight *= 0.3;
-        if (shape.cells.length === 4) weight *= 0.6;
-      }
-    }
-
-    // 1. Hole Match: Şekil bir boşluk kümesiyle tam eşleşiyor mu?
+    let exactMatchFound = false;
     for (const cluster of clusters) {
       if (cluster.length === shape.cells.length) {
         const normalizedCluster = normalizeCells(cluster);
         const clusterKey = normalizedCluster.map(c => c.join(',')).sort().join('|');
         if (shapeKey === clusterKey) {
-          weight += 18.0; // %20 artırılmış tam eşleşme bonusu (15.0 -> 18.0)
+          exactMatchFound = true;
+          break;
         }
-      } else if (cluster.length > shape.cells.length && cluster.length <= 9) {
-        // Şekil bu boşluğa sığıyor mu? (Küçük boşluklar için %20 artırılmış ihtimal artışı: 1.5 -> 1.8)
-        weight += 1.8;
+      }
+    }
+
+    // GICIK PARÇALAR: 1x5, 5x1 ve Artı (Plus) parçaları SADECE tam oturdukları yer varsa gelebilir.
+    if (['1x5', '5x1', 'Plus'].includes(shape.name) && !exactMatchFound) {
+      return 0; // Başka türlü asla gelmesin
+    }
+
+    if (isLowFullness) {
+      // DÜŞÜK DOLULUK MODU: Oyuncuya Perfect Clear yapması için SADECE küçük/yardımcı parçalar ver!
+      if (['1x1', '1x2', '2x1', '1x3', '3x1', 'Corner1', 'Corner2', 'Corner3', 'Corner4'].includes(shape.name)) {
+        weight *= 5.0; // Şanslarını çok arttır
+      } else {
+        return 0; // Diğer hantal parçaları TAMAMEN engelle ki tahtayı temizleyebilsin!
+      }
+    } else {
+      // NORMAL VEYA SIKIŞIK MOD: Zorluk dengesini koru, oyuncuyu boğma
+      if (emptyCellsCount < 12) {
+        if (shape.cells.length >= 5) return 0;
+        if (shape.cells.length === 4) weight *= 0.05; // 4'lükleri aşırı nadir yap
+        if (shape.cells.length <= 2) weight *= 1.5;   // Küçükleri destekle
+      } else if (emptyCellsCount < 20) {
+        if (shape.cells.length >= 5) return 0;
+        if (shape.cells.length === 4) weight *= 0.2;
+      } else if (emptyCellsCount < 28) {
+        if (shape.cells.length >= 5) weight *= 0.2;
+        if (shape.cells.length === 4) weight *= 0.5;
+      }
+    }
+
+    // Hole match bonuslarını ekle
+    if (exactMatchFound) {
+      weight += 18.0; 
+    } else {
+      for (const cluster of clusters) {
+        if (cluster.length > shape.cells.length && cluster.length <= 9) {
+          weight += 1.8;
+        }
       }
     }
 
@@ -480,8 +495,8 @@ function generatePieces() {
       weight += bigChanceBoost;
     }
 
-    // 2x3, 3x2, 3x3 ve Plus bloklarının gelme olasılığını azalt (%80 azaltım)
-    if (['2x3', '3x2', '3x3', 'Plus'].includes(shape.name)) {
+    // 2x3, 3x2, 3x3 bloklarının gelme olasılığını azalt (%80 azaltım)
+    if (['2x3', '3x2', '3x3'].includes(shape.name)) {
       weight *= 0.2;
     }
 
@@ -503,11 +518,10 @@ function generatePieces() {
   };
 
   // Akıllı kombinasyon seçici: 3 parçanın da aynı anda veya sırayla yerleştirilebilir olduğunu doğrula
-  // Deneme sayısını 60'tan 24'e indirdik ki oyuncu tahtayı kötü kullanırsa kurtulamayıp elenebilsin!
   let candidatePieces = [];
   let foundValid = false;
   let attempts = 0;
-  const maxAttempts = 24; // 24 deneme yap (zorluk dengesi)
+  const maxAttempts = 45; // 45 deneme yap (zorluk dengesi)
 
   while (attempts < maxAttempts) {
     candidatePieces = [pickSmart(), pickSmart(), pickSmart()];
@@ -518,13 +532,18 @@ function generatePieces() {
     attempts++;
   }
 
-  // Eğer tamamen yerleşebilir kombinasyon bulamadıysak, en az 1 yerleştirilebilir parça üret
+  // Eğer tamamen yerleşebilir kombinasyon bulamadıysak (örn. tahta çok doludur),
+  // oyuncunun hemen kilitlenmemesi için en az 1 tanesi kesin yerleşsin
+  // ve diğer iki parça da aşırı büyük/hantal olmasın (en fazla 1 adet boyutu >= 4 olan parça bulunabilsin)
   if (!foundValid) {
     attempts = 0;
-    while (attempts < 20) {
+    while (attempts < 30) {
       candidatePieces = [pickSmart(), pickSmart(), pickSmart()];
       if (candidatePieces.some(p => canPlaceAnywhere(p))) {
-        break;
+        const largeCount = candidatePieces.filter(p => p.cells.length >= 4).length;
+        if (largeCount <= 1) {
+          break;
+        }
       }
       attempts++;
     }
