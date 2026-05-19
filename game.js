@@ -95,6 +95,8 @@ let dragRafId = null;    // rAF id for drag optimization
 let clearingInProgress = false; // Satır temizleme animasyonu sırasında yerleştirmeyi engelle
 let gameActive = false;  // Aktif bir oyun var mı?
 let hasSubmittedThisGame = false; // Bu oyunda skor veritabanına başarıyla yüklendi mi?
+let lastSubmitTime = 0;
+let lastSubmittedScoreVal = 0;
 
 // ---- Audio (Web Audio API — tiny synth) ----
 let audioCtx = null;
@@ -592,11 +594,19 @@ function addScore(pts) {
   // Real-time progress bar'ı güncelle
   updateScoreProgress();
 
-  // Real-time Supabase güncellemesi (eğer 1000 puan geçildiyse)
+  // Real-time Supabase güncellemesi (Ağ trafiğini azaltmak ve yarış durumlarını tamamen önlemek için optimize edildi)
   if (score >= 1000) {
     const pName = localStorage.getItem('cubex_playerName');
     if (pName) {
-      submitScore(pName, Math.max(score, bestScore), true); // Arka planda en iyi skoru doğrudan yükle (Hızlı, güvenli ve yarış durumsuz)
+      const now = Date.now();
+      const scoreDiff = score - lastSubmittedScoreVal;
+      
+      // Her 250 puanlık artışta bir VEYA son başarılı yüklemeden bu yana 15 saniye geçtiyse ve skor arttıysa yolla
+      if (scoreDiff >= 250 || (now - lastSubmitTime > 15000 && scoreDiff > 0)) {
+        lastSubmitTime = now;
+        lastSubmittedScoreVal = score;
+        submitScore(pName, Math.max(score, bestScore), true);
+      }
     } else {
       const nameOverlay = document.getElementById('nameOverlay');
       if (nameOverlay && !nameOverlay.classList.contains('active')) {
@@ -939,6 +949,14 @@ function gameOver() {
     clearGameState();
     
     gameOverOverlay.classList.add('active');
+    
+    // Oyun bittiğinde final yüksek skorunu Supabase'e yükle (Garanti senkronizasyon)
+    if (score >= 1000) {
+      const pName = localStorage.getItem('cubex_playerName');
+      if (pName) {
+        submitScore(pName, Math.max(score, bestScore), true);
+      }
+    }
   }
 }
 
