@@ -425,23 +425,49 @@
 
   <script src="game.js?v=1.4.5.0"></script>
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then(reg => {
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // Yeni güncelleme yüklendi. Eğer kullanıcı ana menüdeyse otomatik yenile.
-                const menuActive = document.getElementById('mainMenuOverlay').classList.contains('active');
-                if (menuActive) {
-                  window.location.reload();
-                }
-              }
+    const isNativeApp = !!(window.Capacitor || window.location.protocol === 'capacitor:' || window.location.href.indexOf('http://localhost') === 0);
+
+    if (isNativeApp) {
+      // Native (Android/iOS) uygulamada Service Worker gereksiz ve zararlıdır (yerel dosyaları bozar/cache çakışması yapar).
+      // Bu yüzden kayıtlı tüm Service Worker'ları ve CacheStorage depolarını temizliyoruz.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for (let registration of registrations) {
+            registration.unregister().then(success => {
+              if (success) console.log("Native App: Service Worker başarıyla kaldırıldı.");
+            });
+          }
+        });
+      }
+      if (window.caches) {
+        caches.keys().then(keys => {
+          keys.forEach(key => {
+            caches.delete(key).then(() => {
+              console.log("Native App: Önbellek silindi: " + key);
             });
           });
         });
-      });
+      }
+    } else {
+      // Sadece Web / PWA sürümünde Service Worker kaydet (Çevrimdışı oynanış ve hız için)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').then(reg => {
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // Yeni güncelleme yüklendi. Eğer kullanıcı ana menüdeyse otomatik yenile.
+                  const menuActive = document.getElementById('mainMenuOverlay').classList.contains('active');
+                  if (menuActive) {
+                    window.location.reload();
+                  }
+                }
+              });
+            });
+          });
+        });
+      }
     }
   </script>
 </body>
