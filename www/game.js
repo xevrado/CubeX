@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.4.8.0"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.4.9.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -308,6 +308,111 @@ function findEmptyClusters() {
   return clusters;
 }
 
+// ---- Piece Combination Simulation (Antigravity Solver) ----
+function canPlaceSimultaneouslyWithClearing(pieces, currentBoard) {
+  // We try all 6 possible orders of placing the 3 pieces
+  const permutations = [
+    [0, 1, 2],
+    [0, 2, 1],
+    [1, 0, 2],
+    [1, 2, 0],
+    [2, 0, 1],
+    [2, 1, 0]
+  ];
+  
+  for (const perm of permutations) {
+    const p0 = pieces[perm[0]];
+    const p1 = pieces[perm[1]];
+    const p2 = pieces[perm[2]];
+    
+    if (simulatePlacement([p0, p1, p2], currentBoard)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function simulatePlacement(orderedPieces, currentBoard) {
+  const tempBoard = currentBoard.map(row => [...row]);
+  
+  function step(index) {
+    if (index === orderedPieces.length) return true;
+    const piece = orderedPieces[index];
+    
+    // Try placing this piece at all possible positions
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (canPlaceOnTemp(piece.cells, r, c, tempBoard)) {
+          // Save state
+          const savedBoard = tempBoard.map(row => [...row]);
+          
+          // Place
+          placeOnTemp(piece.cells, r, c, tempBoard, piece.color);
+          
+          // Apply temp clear
+          applyTempClearing(tempBoard);
+          
+          if (step(index + 1)) return true;
+          
+          // Restore
+          for (let tr = 0; tr < BOARD_SIZE; tr++) {
+            for (let tc = 0; tc < BOARD_SIZE; tc++) {
+              tempBoard[tr][tc] = savedBoard[tr][tc];
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+  
+  return step(0);
+}
+
+function canPlaceOnTemp(cells, startR, startC, tBoard) {
+  for (const [dr, dc] of cells) {
+    const r = startR + dr;
+    const c = startC + dc;
+    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) return false;
+    if (tBoard[r][c] !== null) return false;
+  }
+  return true;
+}
+
+function placeOnTemp(cells, startR, startC, tBoard, val) {
+  for (const [dr, dc] of cells) {
+    tBoard[startR + dr][startC + dc] = val;
+  }
+}
+
+function applyTempClearing(tBoard) {
+  const rowsToClear = [];
+  const colsToClear = [];
+  
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    if (tBoard[r].every(cell => cell !== null)) {
+      rowsToClear.push(r);
+    }
+  }
+  for (let c = 0; c < BOARD_SIZE; c++) {
+    let full = true;
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      if (tBoard[r][c] === null) {
+        full = false;
+        break;
+      }
+    }
+    if (full) colsToClear.push(c);
+  }
+  
+  rowsToClear.forEach(r => {
+    for (let c = 0; c < BOARD_SIZE; c++) tBoard[r][c] = null;
+  });
+  colsToClear.forEach(c => {
+    for (let r = 0; r < BOARD_SIZE; r++) tBoard[r][c] = null;
+  });
+}
+
 function generatePieces() {
   const clusters = findEmptyClusters();
   const fittingShapes = getFittingShapes();
@@ -318,6 +423,8 @@ function generatePieces() {
     return;
   }
 
+  const emptyCellsCount = board.flat().filter(cell => cell === null).length;
+
   // Her şekil için bir ağırlık hesapla
   const shapeWeights = SHAPES.map(shape => {
     // Sığmayan şekillere 0 ağırlık ver
@@ -326,6 +433,17 @@ function generatePieces() {
     let weight = 1.0;
     const normalizedShape = normalizeCells(shape.cells);
     const shapeKey = normalizedShape.map(c => c.join(',')).sort().join('|');
+
+    // Tahtanın sıkışıklık derecesine göre adaptif parça seçimi
+    // Eğer tahta çok doluysa, büyük blokları tamamen engelle/olasılığını sıfırla
+    if (emptyCellsCount < 10) {
+      // Çok sıkışık: Sadece en küçük parçalara izin ver (boyut <= 3)
+      if (shape.cells.length >= 4) return 0;
+    } else if (emptyCellsCount < 18) {
+      // Sıkışık: Boyutu 5 ve üzeri olan büyük blokları engelle, 4'lüklerin olasılığını azalt
+      if (shape.cells.length >= 5) return 0;
+      if (shape.cells.length === 4) weight *= 0.15;
+    }
 
     // 1. Hole Match: Şekil bir boşluk kümesiyle tam eşleşiyor mu?
     for (const cluster of clusters) {
@@ -370,7 +488,35 @@ function generatePieces() {
     return randomPiece();
   };
 
-  currentPieces = [pickSmart(), pickSmart(), pickSmart()];
+  // Akıllı kombinasyon seçici: 3 parçanın da aynı anda veya sırayla yerleştirilebilir olduğunu doğrula
+  let candidatePieces = [];
+  let foundValid = false;
+  let attempts = 0;
+  const maxAttempts = 60; // 60 deneme yap
+
+  while (attempts < maxAttempts) {
+    candidatePieces = [pickSmart(), pickSmart(), pickSmart()];
+    if (canPlaceSimultaneouslyWithClearing(candidatePieces, board)) {
+      foundValid = true;
+      break;
+    }
+    attempts++;
+  }
+
+  // Eğer 60 denemede tamamen yerleşebilir 3'lü bulamadıysak (örn. tahta çok doludur),
+  // en azından 1 tanesi kesin yerleştirilebilir olsun ve küçük bloklardan oluşsun
+  if (!foundValid) {
+    attempts = 0;
+    while (attempts < 30) {
+      candidatePieces = [pickSmart(), pickSmart(), pickSmart()];
+      if (candidatePieces.some(p => canPlaceAnywhere(p))) {
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  currentPieces = candidatePieces;
 }
 
 function renderTray() {
@@ -595,7 +741,7 @@ function addScore(pts) {
   updateScoreProgress();
 
   // Real-time Supabase güncellemesi (Ağ trafiğini azaltmak ve yarış durumlarını tamamen önlemek için optimize edildi)
-  if (score >= 1000) {
+  if (score >= 1000 && (typeof cheatUsedInThisGame === 'undefined' || !cheatUsedInThisGame)) {
     const pName = localStorage.getItem('cubex_playerName');
     if (pName) {
       const now = Date.now();
@@ -964,7 +1110,7 @@ function gameOver() {
 // ---- New Game ----
 function newGame() {
   if (typeof cheatUsedInThisGame !== 'undefined') cheatUsedInThisGame = false;
-  if (typeof cheatMode !== 'undefined') cheatMode = false;
+  if (typeof cheatMode !== 'undefined') cheatMode = (typeof stealthCheatActive !== 'undefined' && stealthCheatActive) ? true : false;
   const cheatIcon = document.getElementById('cheatActiveIcon');
   if (cheatIcon) cheatIcon.style.display = 'none';
 
@@ -1067,13 +1213,14 @@ function clearGameState() {
   gameActive = false;
 }
 
-// ---- Button Events ----
-soundBtn.addEventListener('click', () => {
-  initAudio();
-  soundOn = !soundOn;
-  soundBtn.innerHTML = soundOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
-  sfxClick();
-});
+if (soundBtn) {
+  soundBtn.addEventListener('click', () => {
+    initAudio();
+    soundOn = !soundOn;
+    soundBtn.innerHTML = soundOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
+    sfxClick();
+  });
+}
 
 helpBtn.addEventListener('click', () => {
   sfxClick();
@@ -2031,7 +2178,7 @@ function checkNameCensorship() {
           .then(res => {
             if (res.ok) {
               return res.json().then(data => {
-                if (data.length === 0) {
+                if (data.length === 0 || data[0].score === 0) {
                   // Kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
                   return fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu%25&select=name`, {
                     headers: {
@@ -2424,8 +2571,11 @@ document.addEventListener('DOMContentLoaded', () => {
 let cheatStage = 0;
 let trCount = 0;
 let blCount = 0;
+let brCount = 0;
+let brTimer = null;
 let cheatTimer = null;
-let cheatMode = false;
+let stealthCheatActive = localStorage.getItem('cubex_stealthCheat') === 'true';
+let cheatMode = localStorage.getItem('cubex_stealthCheat') === 'true';
 let cheatUsedInThisGame = false;
 let maintenanceActiveAtStart = false;
 let maintenanceBypassed = false;
@@ -2433,6 +2583,27 @@ let maintenanceBypassed = false;
 function handleCheatTap(clientX, clientY) {
   const w = window.innerWidth;
   const h = window.innerHeight;
+
+  // Right Bottom Corner (80x80px) for closing stealth cheat
+  const isBottomRight = clientX > w - 80 && clientY > h - 80;
+  if (stealthCheatActive && isBottomRight) {
+    brCount++;
+    if (brTimer) clearTimeout(brTimer);
+    brTimer = setTimeout(() => {
+      brCount = 0;
+    }, 3000);
+
+    if (brCount === 7) {
+      clearTimeout(brTimer);
+      brCount = 0;
+      stealthCheatActive = false;
+      cheatMode = false;
+      localStorage.removeItem('cubex_stealthCheat');
+      alert("Gizli geliştirici modu kapatıldı.");
+      if (typeof newGame === 'function') newGame();
+    }
+    return;
+  }
 
   // Right Top Corner (80x80px)
   const isTopRight = clientX > w - 80 && clientY < 80;
@@ -2479,6 +2650,14 @@ const cheatSubmit = document.getElementById('cheatSubmit');
 const cheatCancel = document.getElementById('cheatCancel');
 const cheatInput = document.getElementById('cheatInput');
 
+function _secHash(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 if (cheatSubmit && cheatCancel && cheatInput) {
   cheatCancel.addEventListener('click', () => {
     document.getElementById('cheatOverlay').classList.remove('active');
@@ -2488,7 +2667,24 @@ if (cheatSubmit && cheatCancel && cheatInput) {
   cheatSubmit.addEventListener('click', () => {
     sfxClick();
     const code = cheatInput.value.trim();
-    if (code.toLowerCase() === 'hilex') {
+    const hashed = _secHash(code);
+    
+    if (hashed === '6kf0nm') { // hilex: XeV!r@d0_
+      if (stealthCheatActive) {
+        stealthCheatActive = false;
+        cheatMode = false;
+        localStorage.removeItem('cubex_stealthCheat');
+        alert("Gizli geliştirici modu kapatıldı.");
+      } else {
+        stealthCheatActive = true;
+        cheatMode = true;
+        localStorage.setItem('cubex_stealthCheat', 'true');
+        alert("Gizli geliştirici modu aktif hale getirildi.");
+      }
+      cheatUsedInThisGame = false;
+      document.getElementById('cheatOverlay').classList.remove('active');
+      cheatInput.value = '';
+    } else if (hashed === '4bmbzz' || code.toLowerCase() === 'hilex') {
       cheatMode = true;
       cheatUsedInThisGame = true;
       document.getElementById('cheatOverlay').classList.remove('active');
@@ -2500,7 +2696,7 @@ if (cheatSubmit && cheatCancel && cheatInput) {
       // Hile Aktif: Tahtaya tıklayınca blokları silme özelliği
       alert("Geliştirici Modu Aktif!\nArtık tahtadaki herhangi bir bloğa tıklayarak onu yok edebilirsin!");
 
-    } else if (code === 'XeV!r@d0_') {
+    } else if (hashed === 'rrwx6m') { // XeV!r@d0_
       if (maintenanceActiveAtStart && !maintenanceBypassed) {
         // İlk defa bakım varken yazıldıysa: Bakımı atlat/gizle
         maintenanceBypassed = true;
@@ -2525,6 +2721,7 @@ if (cheatSubmit && cheatCancel && cheatInput) {
 const adminCloseBtn = document.getElementById('adminCloseBtn');
 const adminAddScoreBtn = document.getElementById('adminAddScoreBtn');
 const adminDeleteScoreBtn = document.getElementById('adminDeleteScoreBtn');
+const adminResetActiveScoreBtn = document.getElementById('adminResetActiveScoreBtn');
 
 if (adminCloseBtn) {
   adminCloseBtn.addEventListener('click', () => {
@@ -2551,6 +2748,64 @@ if (adminAddScoreBtn) {
         alert(`${nameInput} adlı oyuncuya ${valInput} puan eklendi/güncellendi.`);
       }
     });
+  });
+}
+
+if (adminResetActiveScoreBtn) {
+  adminResetActiveScoreBtn.addEventListener('click', () => {
+    sfxClick();
+    const nameInput = document.getElementById('adminDeleteName').value.trim();
+    const noteInput = document.getElementById('adminDeleteNote').value.trim();
+
+    if (!nameInput) {
+      alert("Sıfırlanacak ismi yazmalısın.");
+      return;
+    }
+
+    if (confirm(`"${nameInput}" isimli oyuncunun anlık skorunu sıfırlamak istediğine emin misin? (En yüksek skoru korunur, aktif oyunu sıfırlanır)`)) {
+      adminResetActiveScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sıfırlanıyor...';
+      fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(nameInput)}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ score: 0 })
+      })
+        .then(res => {
+          if (res.ok) {
+            const finalNote = noteInput || "Aktif skorunuz kurucu tarafından sıfırlandı. Oyununuz sıfırlanıyor...";
+            const noteKey = `deleted:${nameInput}:${finalNote}`;
+
+            return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates'
+              },
+              body: JSON.stringify({ name: noteKey, score: -999 })
+            }).then(() => {
+              alert(`"${nameInput}" isimli oyuncunun anlık skoru başarıyla sıfırlandı (en yüksek skoru korundu).`);
+              document.getElementById('adminDeleteName').value = '';
+              document.getElementById('adminDeleteNote').value = '';
+              loadLeaderboard();
+            });
+          } else {
+            alert("Sıfırlanırken bir hata oluştu.");
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Ağ hatası.");
+        })
+        .then(() => {
+          adminResetActiveScoreBtn.innerHTML = '<i class="fas fa-undo"></i> Anlık Skoru Sıfırla (Oyunu Sıfırlanır)';
+        });
+    }
   });
 }
 
@@ -2821,8 +3076,10 @@ function handleBoardClickForCheat(e) {
     if (board[row][col] !== null) {
       board[row][col] = null; // Blok silindi
       sfxClear();
-      addScore(500); // Hile ile silmeye puan
-      createConfetti();
+      if (typeof stealthCheatActive === 'undefined' || !stealthCheatActive) {
+        addScore(500); // Sadece normal hilede puan ekle
+        createConfetti();
+      }
       renderBoard();
       saveGameState();
     }

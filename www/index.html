@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css?v=1.4.8.0" />
+  <link rel="stylesheet" href="style.css?v=1.4.9.0" />
 </head>
 
 <body>
@@ -52,8 +52,7 @@
         <button class="icon-btn" id="headerLeaderboardBtn" title="Liderlik Tablosu" aria-label="Liderlik Tablosu">
           <i class="fas fa-trophy" style="color: #fbbf24;"></i>
         </button>
-        <button class="icon-btn" id="soundBtn" title="Ses" aria-label="Ses Aç/Kapat"><i
-            class="fas fa-volume-up"></i></button>
+
         <button class="icon-btn" id="helpBtn" title="Yardım" aria-label="Yardım"><i
             class="fas fa-question-circle"></i></button>
       </div>
@@ -342,11 +341,14 @@
       </div>
 
       <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 12px; margin-top: 15px;">
-        <p style="font-size: 14px; color: #fca5a5; margin-bottom: 8px; font-weight: 600;">Oyuncu Sil</p>
-        <input type="text" id="adminDeleteName" class="cheat-input" placeholder="Silinecek İsim (Tam eşleşmeli)" style="margin-bottom: 8px;" />
-        <input type="text" id="adminDeleteNote" class="cheat-input" placeholder="Silme Nedeni / Not (İsteğe bağlı)" />
-        <button class="overlay-btn secondary-btn" id="adminDeleteScoreBtn" style="margin-top: 10px; width: 100%; background: #ef4444; color: white;">
-          <i class="fas fa-trash"></i> Skoru Veritabanından Sil
+        <p style="font-size: 14px; color: #fca5a5; margin-bottom: 8px; font-weight: 600;">Oyuncu Skorlarını Yönet (Sil/Sıfırla)</p>
+        <input type="text" id="adminDeleteName" class="cheat-input" placeholder="İsim (Tam eşleşmeli)" style="margin-bottom: 8px;" />
+        <input type="text" id="adminDeleteNote" class="cheat-input" placeholder="Neden / Not (İsteğe bağlı)" style="margin-bottom: 8px;" />
+        <button class="overlay-btn secondary-btn" id="adminResetActiveScoreBtn" style="width: 100%; background: #f59e0b; color: white; border: none; font-weight: 600; margin-bottom: 8px;">
+          <i class="fas fa-undo"></i> Anlık Skoru Sıfırla (Oyunu Sıfırlanır)
+        </button>
+        <button class="overlay-btn secondary-btn" id="adminDeleteScoreBtn" style="width: 100%; background: #ef4444; color: white; border: none; font-weight: 600;">
+          <i class="fas fa-trash"></i> En Yüksek Skoru & Tüm Verileri Kalıcı Olarak Sil
         </button>
       </div>
 
@@ -442,7 +444,7 @@
     </div>
   </div>
 
-  <script src="game.js?v=1.4.8.0"></script>
+  <script src="game.js?v=1.4.9.0"></script>
   <script>
     const isNativeApp = !!(window.Capacitor || window.location.protocol === 'capacitor:' || window.location.href.indexOf('http://localhost') === 0);
 

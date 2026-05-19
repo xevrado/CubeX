@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.4.8.0"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.4.9.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -308,6 +308,111 @@ function findEmptyClusters() {
   return clusters;
 }
 
+// ---- Piece Combination Simulation (Antigravity Solver) ----
+function canPlaceSimultaneouslyWithClearing(pieces, currentBoard) {
+  // We try all 6 possible orders of placing the 3 pieces
+  const permutations = [
+    [0, 1, 2],
+    [0, 2, 1],
+    [1, 0, 2],
+    [1, 2, 0],
+    [2, 0, 1],
+    [2, 1, 0]
+  ];
+  
+  for (const perm of permutations) {
+    const p0 = pieces[perm[0]];
+    const p1 = pieces[perm[1]];
+    const p2 = pieces[perm[2]];
+    
+    if (simulatePlacement([p0, p1, p2], currentBoard)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function simulatePlacement(orderedPieces, currentBoard) {
+  const tempBoard = currentBoard.map(row => [...row]);
+  
+  function step(index) {
+    if (index === orderedPieces.length) return true;
+    const piece = orderedPieces[index];
+    
+    // Try placing this piece at all possible positions
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (canPlaceOnTemp(piece.cells, r, c, tempBoard)) {
+          // Save state
+          const savedBoard = tempBoard.map(row => [...row]);
+          
+          // Place
+          placeOnTemp(piece.cells, r, c, tempBoard, piece.color);
+          
+          // Apply temp clear
+          applyTempClearing(tempBoard);
+          
+          if (step(index + 1)) return true;
+          
+          // Restore
+          for (let tr = 0; tr < BOARD_SIZE; tr++) {
+            for (let tc = 0; tc < BOARD_SIZE; tc++) {
+              tempBoard[tr][tc] = savedBoard[tr][tc];
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+  
+  return step(0);
+}
+
+function canPlaceOnTemp(cells, startR, startC, tBoard) {
+  for (const [dr, dc] of cells) {
+    const r = startR + dr;
+    const c = startC + dc;
+    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) return false;
+    if (tBoard[r][c] !== null) return false;
+  }
+  return true;
+}
+
+function placeOnTemp(cells, startR, startC, tBoard, val) {
+  for (const [dr, dc] of cells) {
+    tBoard[startR + dr][startC + dc] = val;
+  }
+}
+
+function applyTempClearing(tBoard) {
+  const rowsToClear = [];
+  const colsToClear = [];
+  
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    if (tBoard[r].every(cell => cell !== null)) {
+      rowsToClear.push(r);
+    }
+  }
+  for (let c = 0; c < BOARD_SIZE; c++) {
+    let full = true;
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      if (tBoard[r][c] === null) {
+        full = false;
+        break;
+      }
+    }
+    if (full) colsToClear.push(c);
+  }
+  
+  rowsToClear.forEach(r => {
+    for (let c = 0; c < BOARD_SIZE; c++) tBoard[r][c] = null;
+  });
+  colsToClear.forEach(c => {
+    for (let r = 0; r < BOARD_SIZE; r++) tBoard[r][c] = null;
+  });
+}
+
 function generatePieces() {
   const clusters = findEmptyClusters();
   const fittingShapes = getFittingShapes();
@@ -318,6 +423,8 @@ function generatePieces() {
     return;
   }
 
+  const emptyCellsCount = board.flat().filter(cell => cell === null).length;
+
   // Her şekil için bir ağırlık hesapla
   const shapeWeights = SHAPES.map(shape => {
     // Sığmayan şekillere 0 ağırlık ver
@@ -326,6 +433,17 @@ function generatePieces() {
     let weight = 1.0;
     const normalizedShape = normalizeCells(shape.cells);
     const shapeKey = normalizedShape.map(c => c.join(',')).sort().join('|');
+
+    // Tahtanın sıkışıklık derecesine göre adaptif parça seçimi
+    // Eğer tahta çok doluysa, büyük blokları tamamen engelle/olasılığını sıfırla
+    if (emptyCellsCount < 10) {
+      // Çok sıkışık: Sadece en küçük parçalara izin ver (boyut <= 3)
+      if (shape.cells.length >= 4) return 0;
+    } else if (emptyCellsCount < 18) {
+      // Sıkışık: Boyutu 5 ve üzeri olan büyük blokları engelle, 4'lüklerin olasılığını azalt
+      if (shape.cells.length >= 5) return 0;
+      if (shape.cells.length === 4) weight *= 0.15;
+    }
 
     // 1. Hole Match: Şekil bir boşluk kümesiyle tam eşleşiyor mu?
     for (const cluster of clusters) {
@@ -370,7 +488,35 @@ function generatePieces() {
     return randomPiece();
   };
 
-  currentPieces = [pickSmart(), pickSmart(), pickSmart()];
+  // Akıllı kombinasyon seçici: 3 parçanın da aynı anda veya sırayla yerleştirilebilir olduğunu doğrula
+  let candidatePieces = [];
+  let foundValid = false;
+  let attempts = 0;
+  const maxAttempts = 60; // 60 deneme yap
+
+  while (attempts < maxAttempts) {
+    candidatePieces = [pickSmart(), pickSmart(), pickSmart()];
+    if (canPlaceSimultaneouslyWithClearing(candidatePieces, board)) {
+      foundValid = true;
+      break;
+    }
+    attempts++;
+  }
+
+  // Eğer 60 denemede tamamen yerleşebilir 3'lü bulamadıysak (örn. tahta çok doludur),
+  // en azından 1 tanesi kesin yerleştirilebilir olsun ve küçük bloklardan oluşsun
+  if (!foundValid) {
+    attempts = 0;
+    while (attempts < 30) {
+      candidatePieces = [pickSmart(), pickSmart(), pickSmart()];
+      if (candidatePieces.some(p => canPlaceAnywhere(p))) {
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  currentPieces = candidatePieces;
 }
 
 function renderTray() {
