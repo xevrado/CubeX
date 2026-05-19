@@ -154,9 +154,28 @@
     <div class="overlay-card leaderboard-card" style="max-width: 360px;">
       <div class="overlay-emoji"><i class="fas fa-trophy" style="color: #fbbf24;"></i></div>
       <h2 class="overlay-title">En İyiler</h2>
-      
-      <div class="leaderboard-list" id="leaderboardList">
-        <!-- JS ile doldurulacak -->
+
+      <!-- Sekmeler -->
+      <div class="lb-tabs" id="lbTabs" data-active="live">
+        <span class="lb-tab-pill" id="lbTabPill"></span>
+        <button class="lb-tab active" data-tab="live" data-index="0">Anlık Skor</button>
+        <button class="lb-tab" data-tab="alltime" data-index="1">Tüm Zamanlar</button>
+      </div>
+
+      <!-- Slide Viewport -->
+      <div class="lb-viewport" id="lbViewport">
+        <div class="lb-track" id="lbTrack">
+          <div class="lb-panel" data-panel="live">
+            <div class="leaderboard-list" id="leaderboardList">
+              <!-- JS ile doldurulacak -->
+            </div>
+          </div>
+          <div class="lb-panel" data-panel="alltime">
+            <div class="leaderboard-list" id="leaderboardListAllTime">
+              <!-- JS ile doldurulacak -->
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Sticky Self Rank Container -->

@@ -1267,6 +1267,88 @@ body::before {
 }
 
 /* ---- Leaderboard ---- */
+
+/* Sekme barı: pill kayan göstergesiyle */
+.lb-tabs {
+  position: relative;
+  display: flex;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 4px;
+  margin-top: 5px;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.lb-tab {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 0.25s ease;
+  font-family: inherit;
+}
+
+.lb-tab.active {
+  color: #fff;
+}
+
+.lb-tab-pill {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  background: linear-gradient(135deg, #4f8ef7, #a855f7);
+  border-radius: 9px;
+  box-shadow: 0 4px 14px rgba(79, 142, 247, 0.35);
+  transition: transform 0.32s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform: translateX(0);
+  pointer-events: none;
+}
+
+.lb-tabs[data-active="alltime"] .lb-tab-pill {
+  transform: translateX(100%);
+}
+
+/* Slide viewport: yatay kaydırılan içerik kabı */
+.lb-viewport {
+  width: 100%;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.lb-track {
+  display: flex;
+  width: 200%;
+  transform: translateX(0);
+  transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  will-change: transform;
+}
+
+.lb-track.show-alltime {
+  transform: translateX(-50%);
+}
+
+.lb-panel {
+  flex: 0 0 50%;
+  width: 50%;
+  box-sizing: border-box;
+}
+
 .leaderboard-list {
   width: 100%;
   max-height: 250px;
@@ -1274,10 +1356,10 @@ body::before {
   background: rgba(0,0,0,0.2);
   border-radius: 12px;
   padding: 10px;
-  margin-top: 5px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-sizing: border-box;
 }
 
 .leaderboard-list::-webkit-scrollbar {

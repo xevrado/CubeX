@@ -1450,6 +1450,15 @@ if (showLeaderboardBtn) {
   showLeaderboardBtn.addEventListener('click', () => {
     sfxClick();
     if (leaderboardOverlay) leaderboardOverlay.classList.add('active');
+    // Her açılışta varsayılan olarak "Anlık Skor" sekmesini göster
+    activeLbTab = 'live';
+    const tabsEl = document.getElementById('lbTabs');
+    const trackEl = document.getElementById('lbTrack');
+    if (tabsEl) tabsEl.dataset.active = 'live';
+    if (trackEl) trackEl.classList.remove('show-alltime');
+    document.querySelectorAll('.lb-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === 'live');
+    });
     loadLeaderboard();
   });
 }
@@ -1468,9 +1477,13 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let leaderboardObserver = null;
 
 function setupLeaderboardObserver() {
-  const container = document.getElementById('leaderboardList');
+  // Aktif sekmenin listesine bak
+  const containerId = (typeof activeLbTab !== 'undefined' && activeLbTab === 'alltime')
+    ? 'leaderboardListAllTime'
+    : 'leaderboardList';
+  const container = document.getElementById(containerId);
   const stickySelfRank = document.getElementById('stickySelfRank');
-  const selfElement = document.getElementById('selfLeaderboardItem');
+  const selfElement = container ? container.querySelector('[data-self-item="1"]') : null;
 
   if (!container || !stickySelfRank) return;
 
@@ -2161,167 +2174,251 @@ function submitScore(pName, finalScore, silent = false) {
     .then(allowed => {
       if (!allowed) return false;
 
-      // Kullanıcının her zaman "o anki (aktif) oyun puanı" veri tabanına işlenecek
-      // Tek ve güçlü bir UPSERT (POST + merge-duplicates) isteği atarak hem ağı yormuyoruz hem de varsa doğrudan eziyoruz
-      return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
-        method: 'POST',
+      // Önce kullanıcının mevcut DB satırını çekelim ki best_score'u doğru hesaplayalım.
+      // best_score = max(mevcut_best_score, finalScore). Ayrıca lokal cubex_best ile de karşılaştırılır.
+      return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}&select=score,best_score`, {
         headers: {
           'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({ name: pName, score: finalScore })
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
       })
-        .then(res => {
-          if (res.ok) {
-            localStorage.setItem('cubex_lastSubmitted', finalScore);
-            console.log(`Skor Supabase'e başarıyla güncellendi (UPSERT): ${finalScore}`);
-            hasSubmittedThisGame = true;
-            return true;
-          } else {
-            return res.text().then(errText => {
-              console.error("Supabase UPSERT Hatası:", errText);
-              if (!silent) alert("Veritabanı Hatası: " + errText);
+        .then(r => r.ok ? r.json() : [])
+        .catch(() => [])
+        .then(rows => {
+          let dbBest = 0;
+          if (rows && rows.length > 0) {
+            dbBest = parseInt(rows[0].best_score || 0) || 0;
+          }
+          const localBest = parseInt(localStorage.getItem('cubex_best') || '0') || 0;
+          // Hile kullanılan oyunda best_score'u yükseltmiyoruz
+          const cheatActive = (typeof cheatUsedInThisGame !== 'undefined' && cheatUsedInThisGame);
+          const candidateBest = cheatActive ? dbBest : Math.max(dbBest, localBest, finalScore);
+
+          // Kullanıcının her zaman "o anki (aktif) oyun puanı" veri tabanına işlenecek.
+          // best_score ise tüm zamanların en yükseği olarak büyük değere kilitlenir.
+          return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify({ name: pName, score: finalScore, best_score: candidateBest })
+          })
+            .then(res => {
+              if (res.ok) {
+                localStorage.setItem('cubex_lastSubmitted', finalScore);
+                console.log(`Skor Supabase'e güncellendi (UPSERT): score=${finalScore}, best=${candidateBest}`);
+                hasSubmittedThisGame = true;
+                return true;
+              } else {
+                return res.text().then(errText => {
+                  console.error("Supabase UPSERT Hatası:", errText);
+                  if (!silent) alert("Veritabanı Hatası: " + errText);
+                  return false;
+                });
+              }
+            })
+            .catch(e => {
+              console.error("Skor yüklenemedi", e);
+              if (!silent) alert("Bağlantı hatası: " + e.message);
               return false;
             });
-          }
-        })
-        .catch(e => {
-          console.error("Skor yüklenemedi", e);
-          if (!silent) alert("Bağlantı hatası: " + e.message);
-          return false;
         });
     });
 }
 
 function deleteActiveScore(pName) {
   if (!pName) return Promise.resolve();
+  // Aktif (anlık) skoru sıfırla; best_score (tüm zamanlar) korunsun.
   return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, {
-    method: 'DELETE',
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ score: 0 })
+  })
+    .then(res => {
+      if (res.ok) {
+        console.log(`"${pName}" adlı oyuncunun anlık skoru sıfırlandı (best_score korundu).`);
+      }
+    })
+    .catch(e => {
+      console.error("Skor sıfırlanırken hata oluştu:", e);
+    });
+}
+
+// ---- Leaderboard tab state ----
+let activeLbTab = 'live'; // 'live' | 'alltime'
+
+function renderLeaderboardList(listEl, data, playerName, scoreField) {
+  listEl.innerHTML = '';
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<div class="leaderboard-loading">Henüz hiç skor yok! İlk sen ol!</div>';
+    return;
+  }
+  data.forEach((itemData, index) => {
+    const rank = index + 1;
+    let rankClass = '';
+    if (rank === 1) rankClass = 'top-1';
+    else if (rank === 2) rankClass = 'top-2';
+    else if (rank === 3) rankClass = 'top-3';
+
+    const isSelf = itemData.name === playerName;
+    if (isSelf) rankClass += ' is-self';
+
+    const item = document.createElement('div');
+    item.className = `lb-item ${rankClass}`;
+    if (isSelf) {
+      // self item id sekmeye özgü olur ki observer doğru elemana baksın
+      item.dataset.selfItem = '1';
+    }
+    const scoreVal = itemData[scoreField] != null ? itemData[scoreField] : 0;
+    item.innerHTML = `
+      <span class="lb-rank">${rank}</span>
+      <span class="lb-name">${itemData.name}</span>
+      <span class="lb-score">${scoreVal}</span>
+    `;
+    listEl.appendChild(item);
+  });
+}
+
+function updateSelfRankSticky(playerName, scoreField, listEl) {
+  const stickySelfRank = document.getElementById('stickySelfRank');
+  window.selfRank = null;
+  if (!playerName || !stickySelfRank) {
+    if (stickySelfRank) stickySelfRank.style.display = 'none';
+    return Promise.resolve();
+  }
+
+  return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(playerName)}&select=${scoreField}`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   })
-    .then(res => {
-      if (res.ok) {
-        console.log(`"${pName}" adlı oyuncunun aktif skoru veritabanından silindi.`);
+    .then(r => r.ok ? r.json() : [])
+    .then(rows => {
+      if (!rows || rows.length === 0) {
+        stickySelfRank.style.display = 'none';
+        return;
       }
+      const selfScore = rows[0][scoreField] != null ? rows[0][scoreField] : 0;
+      if (!selfScore || selfScore < 1000) {
+        stickySelfRank.style.display = 'none';
+        return;
+      }
+      return fetch(`${SUPABASE_URL}/rest/v1/scores?${scoreField}=gt.${selfScore}&select=count`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer': 'count=exact'
+        }
+      })
+        .then(countRes => {
+          let selfRank = 1;
+          if (countRes.ok) {
+            const contentRange = countRes.headers.get('content-range');
+            if (contentRange) {
+              const m = contentRange.match(/\/(\d+)/);
+              if (m) selfRank = parseInt(m[1]) + 1;
+            }
+          }
+          document.getElementById('selfRankNum').textContent = `#${selfRank}`;
+          document.getElementById('selfRankNameText').textContent = playerName;
+          document.getElementById('selfRankScoreText').textContent = `${selfScore} Puan`;
+          window.selfRank = selfRank;
+
+          // listEl içinde kullanıcı kendi satırı varsa observer kursun
+          if (listEl) {
+            const selfRow = listEl.querySelector('[data-self-item="1"]');
+            if (selfRow) selfRow.id = 'selfLeaderboardItem';
+          }
+          setupLeaderboardObserver();
+        });
     })
-    .catch(e => {
-      console.error("Skor silinirken hata oluştu:", e);
-    });
+    .catch(e => console.error(e));
 }
 
 function loadLeaderboard() {
-  if (!leaderboardList) return;
+  const liveListEl = document.getElementById('leaderboardList');
+  const allTimeListEl = document.getElementById('leaderboardListAllTime');
+  if (!liveListEl || !allTimeListEl) return;
 
-  leaderboardList.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
+  liveListEl.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
+  allTimeListEl.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
   const stickySelfRank = document.getElementById('stickySelfRank');
   if (stickySelfRank) stickySelfRank.style.display = 'none';
   window.selfRank = null;
 
-  fetch(`${SUPABASE_URL}/rest/v1/scores?score=gte.1000&select=name,score&order=score.desc&limit=25`, {
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`
-    }
-  })
-    .then(res => {
-      if (!res.ok) throw new Error("API Hatası");
-      return res.json();
-    })
-    .then(data => {
-      leaderboardList.innerHTML = '';
+  const playerName = localStorage.getItem('cubex_playerName');
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`
+  };
 
-      if (data.length === 0) {
-        leaderboardList.innerHTML = '<div class="leaderboard-loading">Henüz hiç skor yok! İlk sen ol!</div>';
-        return;
-      }
-
-      const playerName = localStorage.getItem('cubex_playerName');
-
-      data.forEach((itemData, index) => {
-        const rank = index + 1;
-        let rankClass = '';
-        if (rank === 1) rankClass = 'top-1';
-        else if (rank === 2) rankClass = 'top-2';
-        else if (rank === 3) rankClass = 'top-3';
-
-        const isSelf = itemData.name === playerName;
-        if (isSelf) {
-          rankClass += ' is-self';
-        }
-
-        const item = document.createElement('div');
-        item.className = `lb-item ${rankClass}`;
-        if (isSelf) {
-          item.id = 'selfLeaderboardItem';
-        }
-        item.innerHTML = `
-        <span class="lb-rank">${rank}</span>
-        <span class="lb-name">${itemData.name}</span>
-        <span class="lb-score">${itemData.score}</span>
-      `;
-        leaderboardList.appendChild(item);
-      });
-
-      // Kendi sıralamamızı veritabanından çekelim
-      if (playerName) {
-        fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(playerName)}&select=score`, {
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
-        })
-          .then(selfRes => {
-            if (selfRes.ok) {
-              return selfRes.json().then(selfData => {
-                if (selfData && selfData.length > 0) {
-                  const selfScore = selfData[0].score;
-                  return fetch(`${SUPABASE_URL}/rest/v1/scores?score=gt.${selfScore}&select=count`, {
-                    headers: {
-                      'apikey': SUPABASE_KEY,
-                      'Authorization': `Bearer ${SUPABASE_KEY}`,
-                      'Prefer': 'count=exact'
-                    }
-                  })
-                    .then(countRes => {
-                      let selfRank = 1;
-                      if (countRes.ok) {
-                        const contentRange = countRes.headers.get('content-range');
-                        if (contentRange) {
-                          const countMatch = contentRange.match(/\/(\d+)/);
-                          if (countMatch) {
-                            selfRank = parseInt(countMatch[1]) + 1;
-                          }
-                        }
-                      }
-
-                      document.getElementById('selfRankNum').textContent = `#${selfRank}`;
-                      document.getElementById('selfRankNameText').textContent = playerName;
-                      document.getElementById('selfRankScoreText').textContent = `${selfScore} Puan`;
-                      window.selfRank = selfRank;
-
-                      setupLeaderboardObserver();
-                    });
-                }
-              });
-            }
-          })
-          .catch(selfErr => {
-            console.error(selfErr);
-          });
-      } else {
-        setupLeaderboardObserver();
-      }
-    })
+  // Anlık skor sekmesi (mevcut oyun puanı; >= 1000)
+  const liveP = fetch(`${SUPABASE_URL}/rest/v1/scores?score=gte.1000&select=name,score&order=score.desc&limit=25`, { headers })
+    .then(res => res.ok ? res.json() : Promise.reject(new Error("API Hatası")))
+    .then(data => renderLeaderboardList(liveListEl, data, playerName, 'score'))
     .catch(e => {
       console.error(e);
-      leaderboardList.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
+      liveListEl.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
     });
+
+  // Tüm zamanlar sekmesi (best_score; >= 1000)
+  const allTimeP = fetch(`${SUPABASE_URL}/rest/v1/scores?best_score=gte.1000&select=name,best_score&order=best_score.desc&limit=25`, { headers })
+    .then(res => res.ok ? res.json() : Promise.reject(new Error("API Hatası")))
+    .then(data => renderLeaderboardList(allTimeListEl, data, playerName, 'best_score'))
+    .catch(e => {
+      console.error(e);
+      allTimeListEl.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
+    });
+
+  // Liste yüklendikten sonra aktif sekmeye göre sticky self-rank güncelle
+  Promise.all([liveP, allTimeP]).then(() => {
+    refreshSelfRankForActiveTab();
+  });
 }
+
+function refreshSelfRankForActiveTab() {
+  const playerName = localStorage.getItem('cubex_playerName');
+  if (activeLbTab === 'alltime') {
+    updateSelfRankSticky(playerName, 'best_score', document.getElementById('leaderboardListAllTime'));
+  } else {
+    updateSelfRankSticky(playerName, 'score', document.getElementById('leaderboardList'));
+  }
+}
+
+function switchLbTab(target) {
+  if (target !== 'live' && target !== 'alltime') return;
+  if (activeLbTab === target) return;
+  activeLbTab = target;
+
+  const tabsEl = document.getElementById('lbTabs');
+  const trackEl = document.getElementById('lbTrack');
+  if (tabsEl) tabsEl.dataset.active = target;
+  if (trackEl) trackEl.classList.toggle('show-alltime', target === 'alltime');
+
+  document.querySelectorAll('.lb-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === target);
+  });
+
+  refreshSelfRankForActiveTab();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.lb-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sfxClick();
+      switchLbTab(btn.dataset.tab);
+    });
+  });
+});
 
 // ---- Cheat Mode Logic ----
 let cheatStage = 0;
