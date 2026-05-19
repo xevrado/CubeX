@@ -2032,7 +2032,7 @@ function checkNameCensorship() {
           .then(res => {
             if (res.ok) {
               return res.json().then(data => {
-                if (data.length === 0) {
+                if (data.length === 0 || data[0].score === 0) {
                   // Kurucu ismini Oyuncu[Sayı] şeklinde mi değiştirdi?
                   return fetch(`${SUPABASE_URL}/rest/v1/scores?score=eq.${score}&name=like.Oyuncu%25&select=name`, {
                     headers: {
@@ -2504,6 +2504,14 @@ const cheatSubmit = document.getElementById('cheatSubmit');
 const cheatCancel = document.getElementById('cheatCancel');
 const cheatInput = document.getElementById('cheatInput');
 
+function _secHash(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 if (cheatSubmit && cheatCancel && cheatInput) {
   cheatCancel.addEventListener('click', () => {
     document.getElementById('cheatOverlay').classList.remove('active');
@@ -2513,7 +2521,9 @@ if (cheatSubmit && cheatCancel && cheatInput) {
   cheatSubmit.addEventListener('click', () => {
     sfxClick();
     const code = cheatInput.value.trim();
-    if (code === 'hilex: XeV!r@d0_') {
+    const hashed = _secHash(code);
+    
+    if (hashed === '6kf0nm') { // hilex: XeV!r@d0_
       if (stealthCheatActive) {
         stealthCheatActive = false;
         cheatMode = false;
@@ -2528,7 +2538,7 @@ if (cheatSubmit && cheatCancel && cheatInput) {
       cheatUsedInThisGame = false;
       document.getElementById('cheatOverlay').classList.remove('active');
       cheatInput.value = '';
-    } else if (code.toLowerCase() === 'hilex') {
+    } else if (hashed === '4bmbzz' || code.toLowerCase() === 'hilex') {
       cheatMode = true;
       cheatUsedInThisGame = true;
       document.getElementById('cheatOverlay').classList.remove('active');
@@ -2540,7 +2550,7 @@ if (cheatSubmit && cheatCancel && cheatInput) {
       // Hile Aktif: Tahtaya tıklayınca blokları silme özelliği
       alert("Geliştirici Modu Aktif!\nArtık tahtadaki herhangi bir bloğa tıklayarak onu yok edebilirsin!");
 
-    } else if (code === 'XeV!r@d0_') {
+    } else if (hashed === 'rrwx6m') { // XeV!r@d0_
       if (maintenanceActiveAtStart && !maintenanceBypassed) {
         // İlk defa bakım varken yazıldıysa: Bakımı atlat/gizle
         maintenanceBypassed = true;
@@ -2565,6 +2575,7 @@ if (cheatSubmit && cheatCancel && cheatInput) {
 const adminCloseBtn = document.getElementById('adminCloseBtn');
 const adminAddScoreBtn = document.getElementById('adminAddScoreBtn');
 const adminDeleteScoreBtn = document.getElementById('adminDeleteScoreBtn');
+const adminResetActiveScoreBtn = document.getElementById('adminResetActiveScoreBtn');
 
 if (adminCloseBtn) {
   adminCloseBtn.addEventListener('click', () => {
@@ -2591,6 +2602,64 @@ if (adminAddScoreBtn) {
         alert(`${nameInput} adlı oyuncuya ${valInput} puan eklendi/güncellendi.`);
       }
     });
+  });
+}
+
+if (adminResetActiveScoreBtn) {
+  adminResetActiveScoreBtn.addEventListener('click', () => {
+    sfxClick();
+    const nameInput = document.getElementById('adminDeleteName').value.trim();
+    const noteInput = document.getElementById('adminDeleteNote').value.trim();
+
+    if (!nameInput) {
+      alert("Sıfırlanacak ismi yazmalısın.");
+      return;
+    }
+
+    if (confirm(`"${nameInput}" isimli oyuncunun anlık skorunu sıfırlamak istediğine emin misin? (En yüksek skoru korunur, aktif oyunu sıfırlanır)`)) {
+      adminResetActiveScoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sıfırlanıyor...';
+      fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(nameInput)}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ score: 0 })
+      })
+        .then(res => {
+          if (res.ok) {
+            const finalNote = noteInput || "Aktif skorunuz kurucu tarafından sıfırlandı. Oyununuz sıfırlanıyor...";
+            const noteKey = `deleted:${nameInput}:${finalNote}`;
+
+            return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates'
+              },
+              body: JSON.stringify({ name: noteKey, score: -999 })
+            }).then(() => {
+              alert(`"${nameInput}" isimli oyuncunun anlık skoru başarıyla sıfırlandı (en yüksek skoru korundu).`);
+              document.getElementById('adminDeleteName').value = '';
+              document.getElementById('adminDeleteNote').value = '';
+              loadLeaderboard();
+            });
+          } else {
+            alert("Sıfırlanırken bir hata oluştu.");
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Ağ hatası.");
+        })
+        .then(() => {
+          adminResetActiveScoreBtn.innerHTML = '<i class="fas fa-undo"></i> Anlık Skoru Sıfırla (Oyunu Sıfırlanır)';
+        });
+    }
   });
 }
 
