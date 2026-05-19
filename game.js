@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.4.9.0"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.4.10.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -424,6 +424,10 @@ function generatePieces() {
   }
 
   const emptyCellsCount = board.flat().filter(cell => cell === null).length;
+  const filledCellsCount = BOARD_SIZE * BOARD_SIZE - emptyCellsCount;
+  
+  // %15'ten az doluluk durumunu kontrol et (64 hücre * 0.15 = 9.6 -> <= 9 dolu hücre)
+  const isLowFullness = (filledCellsCount > 0 && filledCellsCount <= 9);
 
   // Her şekil için bir ağırlık hesapla
   const shapeWeights = SHAPES.map(shape => {
@@ -434,15 +438,25 @@ function generatePieces() {
     const normalizedShape = normalizeCells(shape.cells);
     const shapeKey = normalizedShape.map(c => c.join(',')).sort().join('|');
 
-    // Tahtanın sıkışıklık derecesine göre adaptif parça seçimi
-    // Eğer tahta çok doluysa, büyük blokları tamamen engelle/olasılığını sıfırla
-    if (emptyCellsCount < 10) {
-      // Çok sıkışık: Sadece en küçük parçalara izin ver (boyut <= 3)
-      if (shape.cells.length >= 4) return 0;
-    } else if (emptyCellsCount < 18) {
-      // Sıkışık: Boyutu 5 ve üzeri olan büyük blokları engelle, 4'lüklerin olasılığını azalt
-      if (shape.cells.length >= 5) return 0;
-      if (shape.cells.length === 4) weight *= 0.15;
+    if (isLowFullness) {
+      // DÜŞÜK DOLULUK MODU (%15'ten az doluluk): Blokların tamamen temizlenebilmesi ve
+      // Perfect Clear şansı için çizgisel ve köşesel parça gelme olasılığını devasa arttır
+      if (['1x1', '1x2', '2x1', '1x3', '3x1', '1x4', '4x1', 'Corner1', 'Corner2', 'Corner3', 'Corner4'].includes(shape.name)) {
+        weight *= 4.0;
+      } else {
+        weight *= 0.1; // Hantal/büyük parçaların gelme ihtimalini azalt
+      }
+    } else {
+      // NORMAL VEYA SIKIŞIK MOD: Zorluk dengesini koru (sonsuz 1x1 döngüsü olmaması için)
+      if (emptyCellsCount < 10) {
+        // Çok sıkışık: Boyutu 5 ve üzeri olanları engelle, 4'lüklerin olasılığını azalt (böylece elenme riski devam eder)
+        if (shape.cells.length >= 5) return 0;
+        if (shape.cells.length === 4) weight *= 0.25;
+      } else if (emptyCellsCount < 18) {
+        // Sıkışık: Boyutu 5 ve üzeri olanları hafifçe sınırla, 4'lükleri daha serbest bırak
+        if (shape.cells.length >= 5) weight *= 0.3;
+        if (shape.cells.length === 4) weight *= 0.6;
+      }
     }
 
     // 1. Hole Match: Şekil bir boşluk kümesiyle tam eşleşiyor mu?
@@ -489,10 +503,11 @@ function generatePieces() {
   };
 
   // Akıllı kombinasyon seçici: 3 parçanın da aynı anda veya sırayla yerleştirilebilir olduğunu doğrula
+  // Deneme sayısını 60'tan 24'e indirdik ki oyuncu tahtayı kötü kullanırsa kurtulamayıp elenebilsin!
   let candidatePieces = [];
   let foundValid = false;
   let attempts = 0;
-  const maxAttempts = 60; // 60 deneme yap
+  const maxAttempts = 24; // 24 deneme yap (zorluk dengesi)
 
   while (attempts < maxAttempts) {
     candidatePieces = [pickSmart(), pickSmart(), pickSmart()];
@@ -503,11 +518,10 @@ function generatePieces() {
     attempts++;
   }
 
-  // Eğer 60 denemede tamamen yerleşebilir 3'lü bulamadıysak (örn. tahta çok doludur),
-  // en azından 1 tanesi kesin yerleştirilebilir olsun ve küçük bloklardan oluşsun
+  // Eğer tamamen yerleşebilir kombinasyon bulamadıysak, en az 1 yerleştirilebilir parça üret
   if (!foundValid) {
     attempts = 0;
-    while (attempts < 30) {
+    while (attempts < 20) {
       candidatePieces = [pickSmart(), pickSmart(), pickSmart()];
       if (candidatePieces.some(p => canPlaceAnywhere(p))) {
         break;
@@ -689,6 +703,26 @@ function checkAndClear() {
     } else {
       sfxClear();
       if (comboDisplayEl) comboDisplayEl.textContent = '';
+    }
+
+    // PERFECT CLEAR BONUS (Tüm bloklar temizlenirse 750 puan ekstra kazanılır)
+    const isBoardEmpty = board.every(row => row.every(cell => cell === null));
+    if (isBoardEmpty) {
+      points += 750;
+      setTimeout(() => {
+        // Melodili geri bildirim tonu (C5 -> E5 -> G5 -> C6)
+        playTone(523.25, 0.12, 'triangle', 0.25);
+        setTimeout(() => playTone(659.25, 0.12, 'triangle', 0.25), 100);
+        setTimeout(() => playTone(783.99, 0.12, 'triangle', 0.25), 200);
+        setTimeout(() => {
+          playTone(1046.50, 0.3, 'sine', 0.3);
+          createConfetti();
+        }, 300);
+      }, 350);
+
+      if (comboDisplayEl) {
+        comboDisplayEl.textContent = '✨ PERFECT CLEAR! +750 🔥';
+      }
     }
 
     if (comboCountEl) comboCountEl.textContent = 'x' + Math.max(1, combo);
