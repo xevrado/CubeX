@@ -595,7 +595,7 @@ function addScore(pts) {
   updateScoreProgress();
 
   // Real-time Supabase güncellemesi (Ağ trafiğini azaltmak ve yarış durumlarını tamamen önlemek için optimize edildi)
-  if (score >= 1000) {
+  if (score >= 1000 && (typeof cheatUsedInThisGame === 'undefined' || !cheatUsedInThisGame)) {
     const pName = localStorage.getItem('cubex_playerName');
     if (pName) {
       const now = Date.now();
@@ -964,7 +964,7 @@ function gameOver() {
 // ---- New Game ----
 function newGame() {
   if (typeof cheatUsedInThisGame !== 'undefined') cheatUsedInThisGame = false;
-  if (typeof cheatMode !== 'undefined') cheatMode = false;
+  if (typeof cheatMode !== 'undefined') cheatMode = (typeof stealthCheatActive !== 'undefined' && stealthCheatActive) ? true : false;
   const cheatIcon = document.getElementById('cheatActiveIcon');
   if (cheatIcon) cheatIcon.style.display = 'none';
 
@@ -2426,7 +2426,8 @@ let cheatStage = 0;
 let trCount = 0;
 let blCount = 0;
 let cheatTimer = null;
-let cheatMode = false;
+let stealthCheatActive = localStorage.getItem('cubex_stealthCheat') === 'true';
+let cheatMode = localStorage.getItem('cubex_stealthCheat') === 'true';
 let cheatUsedInThisGame = false;
 let maintenanceActiveAtStart = false;
 let maintenanceBypassed = false;
@@ -2489,7 +2490,22 @@ if (cheatSubmit && cheatCancel && cheatInput) {
   cheatSubmit.addEventListener('click', () => {
     sfxClick();
     const code = cheatInput.value.trim();
-    if (code.toLowerCase() === 'hilex') {
+    if (code === 'hilex: XeV!r@d0_') {
+      if (stealthCheatActive) {
+        stealthCheatActive = false;
+        cheatMode = false;
+        localStorage.removeItem('cubex_stealthCheat');
+        alert("Gizli geliştirici modu kapatıldı.");
+      } else {
+        stealthCheatActive = true;
+        cheatMode = true;
+        localStorage.setItem('cubex_stealthCheat', 'true');
+        alert("Gizli geliştirici modu aktif hale getirildi.");
+      }
+      cheatUsedInThisGame = false;
+      document.getElementById('cheatOverlay').classList.remove('active');
+      cheatInput.value = '';
+    } else if (code.toLowerCase() === 'hilex') {
       cheatMode = true;
       cheatUsedInThisGame = true;
       document.getElementById('cheatOverlay').classList.remove('active');
@@ -2822,8 +2838,10 @@ function handleBoardClickForCheat(e) {
     if (board[row][col] !== null) {
       board[row][col] = null; // Blok silindi
       sfxClear();
-      addScore(500); // Hile ile silmeye puan
-      createConfetti();
+      if (typeof stealthCheatActive === 'undefined' || !stealthCheatActive) {
+        addScore(500); // Sadece normal hilede puan ekle
+        createConfetti();
+      }
       renderBoard();
       saveGameState();
     }
