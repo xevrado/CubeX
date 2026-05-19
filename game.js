@@ -2425,6 +2425,8 @@ document.addEventListener('DOMContentLoaded', () => {
 let cheatStage = 0;
 let trCount = 0;
 let blCount = 0;
+let brCount = 0;
+let brTimer = null;
 let cheatTimer = null;
 let stealthCheatActive = localStorage.getItem('cubex_stealthCheat') === 'true';
 let cheatMode = localStorage.getItem('cubex_stealthCheat') === 'true';
@@ -2435,6 +2437,27 @@ let maintenanceBypassed = false;
 function handleCheatTap(clientX, clientY) {
   const w = window.innerWidth;
   const h = window.innerHeight;
+
+  // Right Bottom Corner (80x80px) for closing stealth cheat
+  const isBottomRight = clientX > w - 80 && clientY > h - 80;
+  if (stealthCheatActive && isBottomRight) {
+    brCount++;
+    if (brTimer) clearTimeout(brTimer);
+    brTimer = setTimeout(() => {
+      brCount = 0;
+    }, 3000);
+
+    if (brCount === 7) {
+      clearTimeout(brTimer);
+      brCount = 0;
+      stealthCheatActive = false;
+      cheatMode = false;
+      localStorage.removeItem('cubex_stealthCheat');
+      alert("Gizli geliştirici modu kapatıldı.");
+      if (typeof newGame === 'function') newGame();
+    }
+    return;
+  }
 
   // Right Top Corner (80x80px)
   const isTopRight = clientX > w - 80 && clientY < 80;
