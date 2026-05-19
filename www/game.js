@@ -2117,7 +2117,7 @@ function submitScore(pName, finalScore, silent = false) {
   .then(shouldContinue => {
     if (!shouldContinue) return false;
     
-    // Cihazdaki güncel en iyi skoru (finalScore) veritabanına doğrudan senkronize et / ez (Eşitleme bariyerini kaldır)
+    // Cihazdaki güncel skoru veritabanına gönderirken, sadece veritabanındaki mevcut skordan yüksekse güncelle (Liderlik tablosu mantığı)
     return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}&select=score`, {
       headers: {
         'apikey': SUPABASE_KEY,
@@ -2128,7 +2128,13 @@ function submitScore(pName, finalScore, silent = false) {
       if (currentRes.ok) {
         return currentRes.json().then(currentData => {
           if (currentData && currentData.length > 0) {
-            // Kayıt zaten var, cihazdaki güncel yüksek skora eşitle (güncelle)
+            const existingScore = currentData[0].score;
+            if (finalScore <= existingScore) {
+              console.log(`Yeni skor (${finalScore}) mevcut yüksek skordan (${existingScore}) küçük veya eşit olduğu için yükleme atlandı.`);
+              hasSubmittedThisGame = true;
+              return true;
+            }
+            // Skor daha yüksek, güncelle (PATCH)
             return performPatch();
           } else {
             // Kayıt yok, yeni oluştur
