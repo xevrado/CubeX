@@ -2113,92 +2113,37 @@ function submitScore(pName, finalScore, silent = false) {
     }
     return true;
   })
-  .then(shouldContinue => {
-    if (!shouldContinue) return false;
-    
-    // Kullanıcının her zaman "o anki (aktif) oyun puanı" veri tabanına işlenecek (Yüksek skor gözetilmeksizin, önceki skor ezilerek doğrudan PATCH yapılacak)
-    return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}&select=score`, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    })
-    .then(currentRes => {
-      if (currentRes.ok) {
-        return currentRes.json().then(currentData => {
-          if (currentData && currentData.length > 0) {
-            // Kayıt var, o anki skoru doğrudan üzerine yaz (Daha düşük bile olsa eski rekoru ez)
-            return performPatch();
-          } else {
-            // Kayıt yok, yeni oluştur
-            return performPost();
-          }
-        });
-      }
-      return performPost();
-    })
-    .catch(e => {
-      console.warn("Mevcut en yüksek skor denetlenirken geçici bir hata oluştu:", e);
-      return performPost();
-    });
-  })
-  .catch(e => {
-    console.error("Skor yüklenemedi", e);
-    if (!silent) alert("Bağlantı hatası: " + e.message);
-    return false;
-  });
-
-  function performPost() {
-    return fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+    // Kullanıcının her zaman "o anki (aktif) oyun puanı" veri tabanına işlenecek
+    // Tek ve güçlü bir UPSERT (POST + merge-duplicates) isteği atarak hem ağı yormuyoruz hem de varsa doğrudan eziyoruz
+    return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
       },
       body: JSON.stringify({ name: pName, score: finalScore })
     })
     .then(res => {
       if (res.ok) {
         localStorage.setItem('cubex_lastSubmitted', finalScore);
-        console.log("Skor Supabase'e başarıyla kaydedildi (POST).");
-        hasSubmittedThisGame = true; // Yükleme başarılı, işaretle
+        console.log(`Skor Supabase'e başarıyla güncellendi (UPSERT): ${finalScore}`);
+        hasSubmittedThisGame = true;
         return true;
       } else {
         return res.text().then(errText => {
-          console.error("Supabase Hatası (POST):", errText);
+          console.error("Supabase UPSERT Hatası:", errText);
           if (!silent) alert("Veritabanı Hatası: " + errText);
           return false;
         });
       }
-    });
-  }
-
-  function performPatch() {
-    return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ score: finalScore })
     })
-    .then(res => {
-      if (res.ok) {
-        localStorage.setItem('cubex_lastSubmitted', finalScore);
-        console.log("Skor Supabase'e başarıyla güncellendi (PATCH).");
-        hasSubmittedThisGame = true; // Yükleme başarılı, işaretle
-        return true;
-      } else {
-        return res.text().then(errText => {
-          console.error("Supabase Hatası (PATCH):", errText);
-          if (!silent) alert("Veritabanı Hatası: " + errText);
-          return false;
-        });
-      }
+    .catch(e => {
+      console.error("Skor yüklenemedi", e);
+      if (!silent) alert("Bağlantı hatası: " + e.message);
+      return false;
     });
-  }
 }
 
 function deleteActiveScore(pName) {
