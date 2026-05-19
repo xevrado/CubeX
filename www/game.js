@@ -1272,14 +1272,8 @@ function initApp() {
     // Liderlik tablosu puan ilerlemesini ilk defa güncelle
     updateScoreProgress();
 
-    // Oyuna girince isim kontrolü yap
-    const localName = localStorage.getItem('cubex_playerName');
-    const nameOverlay = document.getElementById('nameOverlay');
-    if (!localName) {
-      if (nameOverlay) nameOverlay.classList.add('active');
-    } else {
-      checkNameCensorship();
-    }
+    // Oyuna girince akıllı cihaz/IP tabanlı hesap kontrolü yap
+    checkDeviceAndIpRegistration();
 
     // Her 20 saniyede bir sansür/silinme durumunu arka planda kontrol et (Yarış durumlarını tamamen önler)
     setInterval(() => {
@@ -1417,6 +1411,219 @@ if (closeLeaderboardBtn) {
 const SUPABASE_URL = "https://wrdlbqhlszqskhbignot.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyZGxicWhsc3pxc2toYmlnbm90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMjkxMzEsImV4cCI6MjA5NDYwNTEzMX0.WcTwqQVH3hkHyIpNwwXxY9oKcdcF0eW6fcChvSAZKq4";
 
+// ---- Device, IP-based Account Sync & Anti-Duplicate Name Logic ----
+let leaderboardObserver = null;
+
+function setupLeaderboardObserver() {
+  const container = document.getElementById('leaderboardList');
+  const stickySelfRank = document.getElementById('stickySelfRank');
+  const selfElement = document.getElementById('selfLeaderboardItem');
+  
+  if (!container || !stickySelfRank) return;
+  
+  if (leaderboardObserver) {
+    leaderboardObserver.disconnect();
+    leaderboardObserver = null;
+  }
+  
+  if (!window.selfRank) {
+    stickySelfRank.style.display = 'none';
+    return;
+  }
+  
+  if (selfElement) {
+    const options = {
+      root: container,
+      threshold: 0.99
+    };
+    
+    leaderboardObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          stickySelfRank.style.display = 'none';
+        } else {
+          stickySelfRank.style.display = 'block';
+        }
+      });
+    }, options);
+    
+    leaderboardObserver.observe(selfElement);
+  } else {
+    stickySelfRank.style.display = 'block';
+  }
+}
+
+function checkDeviceAndIpRegistration() {
+  const localName = localStorage.getItem('cubex_playerName');
+  const nameOverlay = document.getElementById('nameOverlay');
+  
+  let deviceId = localStorage.getItem('cubex_deviceId');
+  if (!deviceId) {
+    deviceId = 'dev_' + Math.random().toString(36).substring(2) + '_' + Date.now();
+    localStorage.setItem('cubex_deviceId', deviceId);
+  }
+  
+  return fetch('https://api.ipify.org?format=json')
+    .then(res => res.json())
+    .then(ipData => ipData.ip)
+    .catch(() => 'no_ip')
+    .then(ip => {
+      const headers = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      };
+      
+      if (localName) {
+        // Migration: ensure device/IP is silently registered to the local account if not already done
+        return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.device_ip:${encodeURIComponent(localName)}:%`, { headers })
+          .then(res => {
+            if (res.ok) {
+              return res.json().then(mappings => {
+                const hasCurrentMapping = mappings.some(m => m.name.split(':')[2] === deviceId);
+                if (!hasCurrentMapping) {
+                  const mappingKey = `device_ip:${localName}:${deviceId}:${ip}`;
+                  fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+                    method: 'POST',
+                    headers: {
+                      ...headers,
+                      'Content-Type': 'application/json',
+                      'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify({ name: mappingKey, score: -999 })
+                  }).catch(e => console.error("Silent sync error:", e));
+                }
+              });
+            }
+          })
+          .then(() => {
+            checkNameCensorship();
+          });
+      } else {
+        // Query for any existing registration by deviceId
+        return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.device_ip:%:${deviceId}:%&score=eq.-999`, { headers })
+          .then(res => {
+            if (res.ok) return res.json();
+            return [];
+          })
+          .then(deviceMappings => {
+            if (deviceMappings.length > 0) return deviceMappings;
+            
+            if (ip !== 'no_ip') {
+              return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.device_ip:%:%:${ip}&score=eq.-999`, { headers })
+                .then(res => {
+                  if (res.ok) return res.json();
+                  return [];
+                });
+            }
+            return [];
+          })
+          .then(matchedMappings => {
+            if (matchedMappings.length > 0) {
+              const match = matchedMappings[0].name.split(':');
+              const existingName = match[1];
+              
+              showConfirm(
+                `Daha önce aynı IP veya cihaz üzerinden '${existingName}' kullanıcı adıyla oynadınız. Verileriniz eşitlensin mi?`,
+                () => {
+                  localStorage.setItem('cubex_playerName', existingName);
+                  
+                  // Fetch the high score
+                  fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(existingName)}&select=score`, { headers })
+                    .then(scoreRes => {
+                      if (scoreRes.ok) {
+                        return scoreRes.json().then(scoreData => {
+                          if (scoreData && scoreData.length > 0) {
+                            const dbBest = scoreData[0].score;
+                            const localBest = parseInt(localStorage.getItem('cubex_best') || '0');
+                            const finalBest = Math.max(dbBest, localBest);
+                            localStorage.setItem('cubex_best', finalBest);
+                            bestScore = finalBest;
+                            const menuBestDisplay = document.getElementById('menuBestDisplay');
+                            if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
+                          }
+                        });
+                      }
+                    })
+                    .catch(e => console.error(e))
+                    .then(() => {
+                      const mappingKey = `device_ip:${existingName}:${deviceId}:${ip}`;
+                      return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+                        method: 'POST',
+                        headers: {
+                          ...headers,
+                          'Content-Type': 'application/json',
+                          'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify({ name: mappingKey, score: -999 })
+                      });
+                    })
+                    .catch(e => console.error(e))
+                    .then(() => {
+                      alert(`Hesabınız başarıyla eşitlendi! Tekrar hoş geldin, ${existingName}!`);
+                      checkNameCensorship();
+                    });
+                },
+                () => {
+                  generateAndRegisterAutoName(deviceId, ip);
+                },
+                "Evet, Eşitle",
+                "Hayır, Yeni Hesap Aç"
+              );
+            } else {
+              if (nameOverlay) nameOverlay.classList.add('active');
+            }
+          });
+      }
+    });
+}
+
+function generateAndRegisterAutoName(deviceId, ip) {
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`
+  };
+  
+  return fetch(`${SUPABASE_URL}/rest/v1/scores?select=name`, { headers })
+    .then(res => {
+      if (res.ok) return res.json();
+      return [];
+    })
+    .then(listData => {
+      let x = 1;
+      const names = listData.map(d => d.name);
+      const nums = [];
+      names.forEach(n => {
+        const m = n.match(/^Oyuncu(\d+)$/);
+        if (m) nums.push(parseInt(m[1]));
+      });
+      while (nums.includes(x)) {
+        x++;
+      }
+      return `Oyuncu${x}`;
+    })
+    .catch(() => {
+      return `Oyuncu${Math.floor(1000 + Math.random() * 9000)}`;
+    })
+    .then(autoName => {
+      localStorage.setItem('cubex_playerName', autoName);
+      
+      const mappingKey = `device_ip:${autoName}:${deviceId}:${ip}`;
+      return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({ name: mappingKey, score: -999 })
+      })
+      .then(() => {
+        alert(`Yeni hesabınız başarıyla oluşturuldu!\nKullanıcı Adınız: ${autoName}`);
+        checkNameCensorship();
+      });
+    });
+}
+
 // ---- Name Overlay Logic ----
 const saveNameBtn = document.getElementById('saveNameBtn');
 const playerNameInput = document.getElementById('playerNameInput');
@@ -1432,24 +1639,73 @@ if (saveNameBtn && playerNameInput) {
         return;
       }
       
-      showConfirm(
-        "Lütfen kullanıcı adınızda argo, küfür, aşağılayıcı ve ahlaka uygun olmayan diğer sözcükleri kullanmayın. Aksi takdirde hesabınız yasaklanabilir.",
-        () => {
-          localStorage.setItem('cubex_playerName', pName);
-          nameOverlay.classList.remove('active');
-          
-          // Real-time live submission (en iyi skoru gönder)
-          const finalSub = Math.max(score, bestScore);
-          if (finalSub >= 1000) {
-            submitScore(pName, finalSub, true);
+      saveNameBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kontrol Ediliyor...';
+      const headers = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      };
+      
+      fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, { headers })
+        .then(res => {
+          if (res.ok) return res.json();
+          return [];
+        })
+        .then(existingScores => {
+          if (existingScores.length > 0) {
+            alert("Bu kullanıcı adı başkası tarafından kullanılıyor. Lütfen başka bir isim seçin.");
+            saveNameBtn.innerHTML = '<i class="fas fa-check"></i> Kaydet';
+            return;
           }
           
-          checkNameCensorship();
-        },
-        null,
-        "Onayla",
-        "İptal"
-      );
+          showConfirm(
+            "Lütfen kullanıcı adınızda argo, küfür, aşağılayıcı ve ahlaka uygun olmayan diğer sözcükleri kullanmayın. Aksi takdirde hesabınız yasaklanabilir.",
+            () => {
+              localStorage.setItem('cubex_playerName', pName);
+              nameOverlay.classList.remove('active');
+              
+              let deviceId = localStorage.getItem('cubex_deviceId');
+              if (!deviceId) {
+                deviceId = 'dev_' + Math.random().toString(36).substring(2) + '_' + Date.now();
+                localStorage.setItem('cubex_deviceId', deviceId);
+              }
+              
+              fetch('https://api.ipify.org?format=json')
+                .then(r => r.json())
+                .then(data => data.ip)
+                .catch(() => 'no_ip')
+                .then(ip => {
+                  const mappingKey = `device_ip:${pName}:${deviceId}:${ip}`;
+                  return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
+                    method: 'POST',
+                    headers: {
+                      ...headers,
+                      'Content-Type': 'application/json',
+                      'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify({ name: mappingKey, score: -999 })
+                  });
+                })
+                .catch(e => console.error(e))
+                .then(() => {
+                  const finalSub = Math.max(score, bestScore);
+                  if (finalSub >= 1000) {
+                    submitScore(pName, finalSub, true);
+                  }
+                  checkNameCensorship();
+                });
+            },
+            () => {
+              saveNameBtn.innerHTML = '<i class="fas fa-check"></i> Kaydet';
+            },
+            "Onayla",
+            "İptal"
+          );
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Ağ bağlantısı denetlenirken hata oluştu.");
+          saveNameBtn.innerHTML = '<i class="fas fa-check"></i> Kaydet';
+        });
     } else {
       alert("Lütfen geçerli bir isim girin.");
     }
@@ -1797,29 +2053,7 @@ function updateScoreProgress() {
 }
 
 function updateStickySelfRankVisibility() {
-  const container = document.getElementById('leaderboardList');
-  const stickySelfRank = document.getElementById('stickySelfRank');
-  if (!container || !stickySelfRank) return;
-  
-  if (!window.selfRank) {
-    stickySelfRank.style.display = 'none';
-    return;
-  }
-  
-  const selfElement = document.getElementById('selfLeaderboardItem');
-  if (selfElement) {
-    const containerRect = container.getBoundingClientRect();
-    const elemRect = selfElement.getBoundingClientRect();
-    
-    const isVisible = (elemRect.top >= containerRect.top) && (elemRect.bottom <= containerRect.bottom);
-    if (isVisible) {
-      stickySelfRank.style.display = 'none';
-    } else {
-      stickySelfRank.style.display = 'block';
-    }
-  } else {
-    stickySelfRank.style.display = 'block';
-  }
+  // Optimized: Moved to IntersectionObserver in setupLeaderboardObserver() to completely prevent layout thrashing and lag.
 }
 
 function submitScore(pName, finalScore, silent = false) {
@@ -2049,10 +2283,7 @@ function loadLeaderboard() {
                 document.getElementById('selfRankScoreText').textContent = `${selfScore} Puan`;
                 window.selfRank = selfRank;
                 
-                // Scroll dinleyicisini ekle ve başlangıç durumunu ayarla
-                leaderboardList.removeEventListener('scroll', updateStickySelfRankVisibility);
-                leaderboardList.addEventListener('scroll', updateStickySelfRankVisibility);
-                updateStickySelfRankVisibility();
+                setupLeaderboardObserver();
               });
             }
           });
@@ -2062,10 +2293,7 @@ function loadLeaderboard() {
         console.error(selfErr);
       });
     } else {
-      // Scroll dinleyicisini ekle ve başlangıç durumunu ayarla
-      leaderboardList.removeEventListener('scroll', updateStickySelfRankVisibility);
-      leaderboardList.addEventListener('scroll', updateStickySelfRankVisibility);
-      updateStickySelfRankVisibility();
+      setupLeaderboardObserver();
     }
   })
   .catch(e => {
