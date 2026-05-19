@@ -601,11 +601,10 @@ function addScore(pts) {
       const now = Date.now();
       const scoreDiff = score - lastSubmittedScoreVal;
       
-      // Her 250 puanlık artışta bir VEYA son başarılı yüklemeden bu yana 15 saniye geçtiyse ve skor arttıysa yolla
       if (scoreDiff >= 250 || (now - lastSubmitTime > 15000 && scoreDiff > 0)) {
         lastSubmitTime = now;
         lastSubmittedScoreVal = score;
-        submitScore(pName, score, true);
+        submitScore(pName, Math.max(score, bestScore), true);
       }
     } else {
       const nameOverlay = document.getElementById('nameOverlay');
@@ -954,7 +953,7 @@ function gameOver() {
     if (score >= 1000) {
       const pName = localStorage.getItem('cubex_playerName');
       if (pName) {
-        submitScore(pName, score, true);
+        submitScore(pName, Math.max(score, bestScore), true);
       }
     }
   }
