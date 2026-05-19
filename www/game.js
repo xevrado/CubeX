@@ -604,7 +604,7 @@ function addScore(pts) {
       if (scoreDiff >= 250 || (now - lastSubmitTime > 15000 && scoreDiff > 0)) {
         lastSubmitTime = now;
         lastSubmittedScoreVal = score;
-        submitScore(pName, Math.max(score, bestScore), true);
+        submitScore(pName, score, true);
       }
     } else {
       const nameOverlay = document.getElementById('nameOverlay');
@@ -953,7 +953,7 @@ function gameOver() {
     if (score >= 1000) {
       const pName = localStorage.getItem('cubex_playerName');
       if (pName) {
-        submitScore(pName, Math.max(score, bestScore), true);
+        submitScore(pName, score, true);
       }
     }
   }
@@ -2116,7 +2116,7 @@ function submitScore(pName, finalScore, silent = false) {
   .then(shouldContinue => {
     if (!shouldContinue) return false;
     
-    // Cihazdaki güncel skoru veritabanına gönderirken, sadece veritabanındaki mevcut skordan yüksekse güncelle (Liderlik tablosu mantığı)
+    // Kullanıcının her zaman "o anki (aktif) oyun puanı" veri tabanına işlenecek (Yüksek skor gözetilmeksizin, önceki skor ezilerek doğrudan PATCH yapılacak)
     return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}&select=score`, {
       headers: {
         'apikey': SUPABASE_KEY,
@@ -2127,13 +2127,7 @@ function submitScore(pName, finalScore, silent = false) {
       if (currentRes.ok) {
         return currentRes.json().then(currentData => {
           if (currentData && currentData.length > 0) {
-            const existingScore = currentData[0].score;
-            if (finalScore <= existingScore) {
-              console.log(`Yeni skor (${finalScore}) mevcut yüksek skordan (${existingScore}) küçük veya eşit olduğu için yükleme atlandı.`);
-              hasSubmittedThisGame = true;
-              return true;
-            }
-            // Skor daha yüksek, güncelle (PATCH)
+            // Kayıt var, o anki skoru doğrudan üzerine yaz (Daha düşük bile olsa eski rekoru ez)
             return performPatch();
           } else {
             // Kayıt yok, yeni oluştur
