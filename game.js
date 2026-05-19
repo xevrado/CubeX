@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.4.7.0"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.4.8.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -1341,16 +1341,7 @@ initApp();
 
 // ---- Offline to Online Score Sync ----
 function syncPendingScore() {
-  if (!navigator.onLine) return;
-  const best = parseInt(localStorage.getItem('cubex_best') || '0');
-  const lastSub = parseInt(localStorage.getItem('cubex_lastSubmitted') || '0');
-  const pName = localStorage.getItem('cubex_playerName');
-  
-  // Eğer oyuncunun bir ismi varsa ve son kaydedilen skordan daha yüksek bir yerel "best" skoru varsa yolla
-  if (best > 0 && best > lastSub && pName) {
-    console.log("Çevrimdışı yapılan rekor çevrimiçi olundu, eşitleniyor:", best);
-    submitScore(pName, best);
-  }
+  // Disabled: Skorlar liderlik tablosu güvenirliği için SADECE aktif oyun oturumu esnasında alınır ve güncellenir.
 }
 
 window.addEventListener('online', syncPendingScore);
@@ -1705,10 +1696,6 @@ if (saveNameBtn && playerNameInput) {
                 })
                 .catch(e => console.error(e))
                 .then(() => {
-                  const finalSub = Math.max(score, bestScore);
-                  if (finalSub >= 1000) {
-                    submitScore(pName, finalSub, true);
-                  }
                   checkNameCensorship();
                 });
             },
