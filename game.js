@@ -1067,13 +1067,14 @@ function clearGameState() {
   gameActive = false;
 }
 
-// ---- Button Events ----
-soundBtn.addEventListener('click', () => {
-  initAudio();
-  soundOn = !soundOn;
-  soundBtn.innerHTML = soundOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
-  sfxClick();
-});
+if (soundBtn) {
+  soundBtn.addEventListener('click', () => {
+    initAudio();
+    soundOn = !soundOn;
+    soundBtn.innerHTML = soundOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
+    sfxClick();
+  });
+}
 
 helpBtn.addEventListener('click', () => {
   sfxClick();

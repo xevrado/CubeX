@@ -202,6 +202,7 @@ body::before {
   transition: transform 0.2s ease;
   z-index: 10;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .download-btn:hover {
@@ -293,6 +294,7 @@ body::before {
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .icon-btn:active {
@@ -1628,4 +1630,30 @@ body::before {
 /* Ensure Developer and Founder overlays appear on top of Maintenance overlay */
 #cheatOverlay, #adminOverlay {
   z-index: 20000 !important;
+}
+
+/* ---- Narrow Mobile Header Optimizations ---- */
+@media (max-width: 375px) {
+  .app-title {
+    font-size: 18px !important;
+  }
+  .download-btn {
+    height: 34px !important;
+  }
+  .download-btn-content {
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    height: 30px !important;
+  }
+  .header-left > * {
+    margin-right: 6px !important;
+  }
+  .header-right {
+    gap: 6px !important;
+  }
+  .icon-btn {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 13px !important;
+  }
 }
