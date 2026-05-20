@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css?v=1.5.1.0" />
+  <link rel="stylesheet" href="style.css?v=1.5.2.0" />
 </head>
 
 <body>
@@ -259,7 +259,8 @@
         <strong>Uyarı:</strong> Liderlik tablosuna girebilmek ve skorunuzun kaydedilmesi için en az <strong>1000 puan</strong> barajını geçmeniz gerekmektedir.
       </div>
 
-      <input type="text" id="playerNameInput" class="cheat-input" placeholder="Oyuncu Adı" maxlength="12" autocomplete="off" />
+      <input type="text" id="playerNameInput" class="cheat-input" placeholder="Oyuncu Adı" maxlength="12" autocomplete="off" style="margin-bottom: 8px;" />
+      <input type="number" id="playerBestScoreInput" class="cheat-input" placeholder="En İyi Skor (İsteğe bağlı)" autocomplete="off" />
       <button class="overlay-btn primary-btn" id="saveNameBtn" style="margin-top: 18px;">
         <i class="fas fa-paper-plane"></i> Kaydet
       </button>
@@ -444,7 +445,7 @@
     </div>
   </div>
 
-  <script src="game.js?v=1.5.1.0"></script>
+  <script src="game.js?v=1.5.2.0"></script>
   <script>
     const isNativeApp = !!(window.Capacitor || window.location.protocol === 'capacitor:' || window.location.href.indexOf('http://localhost') === 0);
 

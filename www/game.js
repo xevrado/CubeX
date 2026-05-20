@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.5.1.0"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.5.2.0"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -426,8 +426,9 @@ function generatePieces() {
   const emptyCellsCount = board.flat().filter(cell => cell === null).length;
   const filledCellsCount = BOARD_SIZE * BOARD_SIZE - emptyCellsCount;
   
-  // Tahtadaki blokları tamamen temizleme (Perfect Clear) şansını arttırmak için eşiği 15'e çıkardık
-  const isLowFullness = (filledCellsCount > 0 && filledCellsCount <= 15);
+  // Tahtadaki blokları tamamen temizleme (Perfect Clear) şansını arttırmak için yeni eşikler belirledik
+  const isLowFullness = (filledCellsCount > 0 && filledCellsCount <= 22);
+  const isUltraLowFullness = (filledCellsCount > 0 && filledCellsCount <= 10);
 
   // Her şekil için bir ağırlık hesapla
   const shapeWeights = SHAPES.map(shape => {
@@ -455,7 +456,14 @@ function generatePieces() {
       return 0; // Başka türlü asla gelmesin
     }
 
-    if (isLowFullness) {
+    if (isUltraLowFullness) {
+      // ÇOK DÜŞÜK DOLULUK MODU: Oyuncunun Perfect Clear yapmasını kolaylaştırmak için sadece en küçük parçaları ver
+      if (['1x1', '1x2', '2x1'].includes(shape.name)) {
+        weight *= 8.0;
+      } else {
+        return 0; // 3'lük ve üzeri parçaları tamamen engelle
+      }
+    } else if (isLowFullness) {
       // DÜŞÜK DOLULUK MODU: Oyuncuya Perfect Clear yapması için SADECE küçük/yardımcı parçalar ver!
       if (['1x1', '1x2', '2x1', '1x3', '3x1', 'Corner1', 'Corner2', 'Corner3', 'Corner4'].includes(shape.name)) {
         weight *= 5.0; // Şanslarını çok arttır
@@ -714,9 +722,12 @@ function checkAndClear() {
     }, 350);
 
     // 6. Score
-    let points = linesCleared * 10 * BOARD_SIZE;
+    let points = linesCleared * 80;
+    if (linesCleared > 1) {
+      points += linesCleared * 20;
+    }
     if (combo > 1) {
-      points = Math.floor(points * (1 + combo * 0.5));
+      points = points * combo;
       sfxCombo();
       if (comboDisplayEl) comboDisplayEl.textContent = '🔥 COMBO x' + combo + '!';
     } else {
@@ -724,10 +735,10 @@ function checkAndClear() {
       if (comboDisplayEl) comboDisplayEl.textContent = '';
     }
 
-    // PERFECT CLEAR BONUS (Tüm bloklar temizlenirse 750 puan ekstra kazanılır)
+    // PERFECT CLEAR BONUS (Tüm bloklar temizlenirse 1000 puan ekstra kazanılır)
     const isBoardEmpty = board.every(row => row.every(cell => cell === null));
     if (isBoardEmpty) {
-      points += 750;
+      points += 1000;
       setTimeout(() => {
         // Melodili geri bildirim tonu (C5 -> E5 -> G5 -> C6)
         playTone(523.25, 0.12, 'triangle', 0.25);
@@ -740,7 +751,7 @@ function checkAndClear() {
       }, 350);
 
       if (comboDisplayEl) {
-        comboDisplayEl.textContent = '✨ PERFECT CLEAR! +750 🔥';
+        comboDisplayEl.textContent = '✨ PERFECT CLEAR! +1000 🔥';
       }
     }
 
@@ -1893,6 +1904,7 @@ function generateAndRegisterAutoName(deviceId, ip) {
 // ---- Name Overlay Logic ----
 const saveNameBtn = document.getElementById('saveNameBtn');
 const playerNameInput = document.getElementById('playerNameInput');
+const playerBestScoreInput = document.getElementById('playerBestScoreInput');
 const nameOverlay = document.getElementById('nameOverlay');
 
 if (saveNameBtn && playerNameInput) {
@@ -1940,6 +1952,19 @@ if (saveNameBtn && playerNameInput) {
                 .then(data => data.ip)
                 .catch(() => 'no_ip')
                 .then(ip => {
+                  let initialScore = -999;
+                  if (playerBestScoreInput && playerBestScoreInput.value) {
+                    const parsed = parseInt(playerBestScoreInput.value, 10);
+                    if (!isNaN(parsed) && parsed >= 0) {
+                      initialScore = parsed;
+                      bestScore = parsed;
+                      localStorage.setItem('cubex_best', bestScore);
+                      if (typeof bestEl !== 'undefined' && bestEl) bestEl.textContent = bestScore;
+                      const menuBestDisplay = document.getElementById('menuBestDisplay');
+                      if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
+                    }
+                  }
+
                   const mappingKey = `device_ip:${pName}:${deviceId}:${ip}`;
                   return fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`, {
                     method: 'POST',
@@ -1948,7 +1973,7 @@ if (saveNameBtn && playerNameInput) {
                       'Content-Type': 'application/json',
                       'Prefer': 'resolution=merge-duplicates'
                     },
-                    body: JSON.stringify({ name: mappingKey, score: -999 })
+                    body: JSON.stringify({ name: mappingKey, score: initialScore })
                   });
                 })
                 .catch(e => console.error(e))
