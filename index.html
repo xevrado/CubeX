@@ -81,7 +81,7 @@
       </div>
 
     </section>
- 
+
     <!-- Real-time Score Progress -->
     <div class="score-progress-container" id="scoreProgressContainer">
       <div class="progress-info">
@@ -123,9 +123,11 @@
         <i class="fas fa-play"></i> Devam Et
       </button>
       <button class="overlay-btn primary-btn menu-play-btn" id="startBtn" style="margin-bottom: 10px;">
-        <i class="fas fa-gamepad"></i> Yeni Oyun — <span class="menu-best-text">[En İyi: <span id="menuBestDisplay">0</span> p.]</span>
+        <i class="fas fa-gamepad"></i> Yeni Oyun — <span class="menu-best-text">[En İyi: <span
+            id="menuBestDisplay">0</span> p.]</span>
       </button>
-      <button class="overlay-btn secondary-btn menu-play-btn" id="showLeaderboardBtn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+      <button class="overlay-btn secondary-btn menu-play-btn" id="showLeaderboardBtn"
+        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
         <i class="fas fa-trophy" style="color: #fbbf24;"></i> Liderlik Tablosu
       </button>
 
@@ -187,7 +189,8 @@
         </div>
       </div>
 
-      <button class="overlay-btn secondary-btn" id="closeLeaderboardBtn" style="margin-top: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+      <button class="overlay-btn secondary-btn" id="closeLeaderboardBtn"
+        style="margin-top: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
         <i class="fas fa-times"></i> Kapat
       </button>
     </div>
@@ -253,14 +256,18 @@
       <div class="overlay-emoji"><i class="fas fa-medal" style="color: #fbbf24;"></i></div>
       <h2 class="overlay-title">Oyuncu İsmi</h2>
       <p class="overlay-sub">Liderlik tablosu için ismini gir</p>
-      
-      <div class="warning-box" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 12px; line-height: 1.4; margin: 12px 0; text-align: left; box-sizing: border-box;">
+
+      <div class="warning-box"
+        style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 12px; line-height: 1.4; margin: 12px 0; text-align: left; box-sizing: border-box;">
         <i class="fas fa-exclamation-triangle" style="margin-right: 4px; color: #ef4444;"></i>
-        <strong>Uyarı:</strong> Liderlik tablosuna girebilmek ve skorunuzun kaydedilmesi için en az <strong>1000 puan</strong> barajını geçmeniz gerekmektedir.
+        <strong>Uyarı:</strong> Liderlik tablosuna girebilmek ve skorunuzun kaydedilmesi için en az <strong>1000
+          puan</strong> barajını geçmeniz gerekmektedir.
       </div>
 
-      <input type="text" id="playerNameInput" class="cheat-input" placeholder="Oyuncu Adı" maxlength="12" autocomplete="off" style="margin-bottom: 8px;" />
-      <input type="number" id="playerBestScoreInput" class="cheat-input" placeholder="En İyi Skor (İsteğe bağlı)" autocomplete="off" />
+      <input type="text" id="playerNameInput" class="cheat-input" placeholder="Oyuncu Adı" maxlength="12"
+        autocomplete="off" style="margin-bottom: 8px;" />
+      <input type="number" id="playerBestScoreInput" class="cheat-input" placeholder="En İyi Skor (İsteğe bağlı)"
+        autocomplete="off" />
       <button class="overlay-btn primary-btn" id="saveNameBtn" style="margin-top: 18px;">
         <i class="fas fa-paper-plane"></i> Kaydet
       </button>
@@ -273,14 +280,19 @@
       <div class="overlay-emoji"><i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i></div>
       <h2 class="overlay-title">İsim Değişikliği</h2>
       <p class="overlay-sub" style="font-size: 14px; margin-bottom: 15px; line-height: 1.5; color: #cbd5e1;">
-        Kurucu tarafından isminiz uygunsuz bulunduğu için <strong id="censoredOldName" style="color: #fca5a5;">OyuncuX</strong> olarak değiştirilmiştir. 
+        Kurucu tarafından isminiz uygunsuz bulunduğu için <strong id="censoredOldName"
+          style="color: #fca5a5;">OyuncuX</strong> olarak değiştirilmiştir.
         Yeni bir isim belirlemek ister misiniz, yoksa bu şekilde kalmasını mı tercih edersiniz?
       </p>
       <!-- Creator Note Display -->
-      <p id="censorNoteText" style="font-size: 13px; color: #fde047; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); padding: 10px; border-radius: 8px; line-height: 1.4; margin: -5px 0 12px 0; text-align: left; box-sizing: border-box; display: none;"></p>
-      <input type="text" id="newPlayerNameInput" class="cheat-input" placeholder="Yeni Oyuncu Adı" maxlength="12" autocomplete="off" style="margin-bottom: 12px;" />
+      <p id="censorNoteText"
+        style="font-size: 13px; color: #fde047; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); padding: 10px; border-radius: 8px; line-height: 1.4; margin: -5px 0 12px 0; text-align: left; box-sizing: border-box; display: none;">
+      </p>
+      <input type="text" id="newPlayerNameInput" class="cheat-input" placeholder="Yeni Oyuncu Adı" maxlength="12"
+        autocomplete="off" style="margin-bottom: 12px;" />
       <div style="display: flex; gap: 12px; margin-top: 15px;">
-        <button class="overlay-btn secondary-btn" id="censorKeepBtn" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); font-size: 13px;">
+        <button class="overlay-btn secondary-btn" id="censorKeepBtn"
+          style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); font-size: 13px;">
           Böyle Kalsın
         </button>
         <button class="overlay-btn primary-btn" id="censorSaveBtn" style="flex:1; font-size: 13px;">
@@ -314,9 +326,11 @@
       <div class="overlay-emoji"><i class="fas fa-terminal" style="color: #0ea5e9;"></i></div>
       <h2 class="overlay-title">Geliştirici Bölümü</h2>
       <p class="overlay-sub">Geliştirici kodunu girin</p>
-      <input type="text" id="cheatInput" class="cheat-input" placeholder="Kod" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      <input type="text" id="cheatInput" class="cheat-input" placeholder="Kod" autocomplete="off" autocorrect="off"
+        autocapitalize="off" spellcheck="false" />
       <div style="display: flex; gap: 12px; margin-top: 18px;">
-        <button class="overlay-btn secondary-btn" id="cheatCancel" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+        <button class="overlay-btn secondary-btn" id="cheatCancel"
+          style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
           İptal
         </button>
         <button class="overlay-btn primary-btn" id="cheatSubmit" style="flex:1;">
@@ -331,48 +345,62 @@
     <div class="overlay-card" style="max-width: 360px; text-align: center; max-height: 90vh; overflow-y: auto;">
       <div class="overlay-emoji"><i class="fas fa-crown" style="color: #f59e0b;"></i></div>
       <h2 class="overlay-title">Kurucu Paneli</h2>
-      
+
       <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-top: 15px;">
         <p style="font-size: 14px; color: #cbd5e1; margin-bottom: 8px; font-weight: 600;">Skor Ekle / Değiştir</p>
-        <input type="text" id="adminScoreName" class="cheat-input" placeholder="Oyuncu Adı" style="margin-bottom: 8px;" />
+        <input type="text" id="adminScoreName" class="cheat-input" placeholder="Oyuncu Adı"
+          style="margin-bottom: 8px;" />
         <input type="number" id="adminScoreValue" class="cheat-input" placeholder="Puan (Örn: 99999)" />
         <button class="overlay-btn primary-btn" id="adminAddScoreBtn" style="margin-top: 10px; width: 100%;">
           <i class="fas fa-upload"></i> Skoru Yükle
         </button>
       </div>
 
-      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 12px; margin-top: 15px;">
-        <p style="font-size: 14px; color: #fca5a5; margin-bottom: 8px; font-weight: 600;">Oyuncu Skorlarını Yönet (Sil/Sıfırla)</p>
-        <input type="text" id="adminDeleteName" class="cheat-input" placeholder="İsim (Tam eşleşmeli)" style="margin-bottom: 8px;" />
-        <input type="text" id="adminDeleteNote" class="cheat-input" placeholder="Neden / Not (İsteğe bağlı)" style="margin-bottom: 8px;" />
-        <button class="overlay-btn secondary-btn" id="adminResetActiveScoreBtn" style="width: 100%; background: #f59e0b; color: white; border: none; font-weight: 600; margin-bottom: 8px;">
+      <div
+        style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 12px; margin-top: 15px;">
+        <p style="font-size: 14px; color: #fca5a5; margin-bottom: 8px; font-weight: 600;">Oyuncu Skorlarını Yönet
+          (Sil/Sıfırla)</p>
+        <input type="text" id="adminDeleteName" class="cheat-input" placeholder="İsim (Tam eşleşmeli)"
+          style="margin-bottom: 8px;" />
+        <input type="text" id="adminDeleteNote" class="cheat-input" placeholder="Neden / Not (İsteğe bağlı)"
+          style="margin-bottom: 8px;" />
+        <button class="overlay-btn secondary-btn" id="adminResetActiveScoreBtn"
+          style="width: 100%; background: #f59e0b; color: white; border: none; font-weight: 600; margin-bottom: 8px;">
           <i class="fas fa-undo"></i> Anlık Skoru Sıfırla (Oyunu Sıfırlanır)
         </button>
-        <button class="overlay-btn secondary-btn" id="adminDeleteScoreBtn" style="width: 100%; background: #ef4444; color: white; border: none; font-weight: 600;">
+        <button class="overlay-btn secondary-btn" id="adminDeleteScoreBtn"
+          style="width: 100%; background: #ef4444; color: white; border: none; font-weight: 600;">
           <i class="fas fa-trash"></i> En Yüksek Skoru & Tüm Verileri Kalıcı Olarak Sil
         </button>
       </div>
 
-      <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); padding: 15px; border-radius: 12px; margin-top: 15px;">
+      <div
+        style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); padding: 15px; border-radius: 12px; margin-top: 15px;">
         <p style="font-size: 14px; color: #fde047; margin-bottom: 8px; font-weight: 600;">Oyuncu İsmini Sansürle</p>
-        <input type="text" id="adminCensorName" class="cheat-input" placeholder="Uygunsuz İsmi Girin" style="margin-bottom: 8px;" />
+        <input type="text" id="adminCensorName" class="cheat-input" placeholder="Uygunsuz İsmi Girin"
+          style="margin-bottom: 8px;" />
         <input type="text" id="adminCensorNote" class="cheat-input" placeholder="Sansür Nedeni / Not (İsteğe bağlı)" />
-        <button class="overlay-btn primary-btn" id="adminCensorBtn" style="margin-top: 10px; width: 100%; background: #f59e0b; color: white; border: none;">
+        <button class="overlay-btn primary-btn" id="adminCensorBtn"
+          style="margin-top: 10px; width: 100%; background: #f59e0b; color: white; border: none;">
           <i class="fas fa-ban"></i> İsmi 'Oyuncu[X]' Yap
         </button>
       </div>
 
-      <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 12px; margin-top: 15px;">
+      <div
+        style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 12px; margin-top: 15px;">
         <p style="font-size: 14px; color: #fca5a5; margin-bottom: 8px; font-weight: 600;">Oyuncu Engelle (Ban)</p>
-        <input type="text" id="adminBanName" class="cheat-input" placeholder="Engellenecek İsim" style="margin-bottom: 8px;" />
-        <select id="adminBanDuration" class="cheat-input" style="margin-bottom: 8px; background: rgba(10,10,26,0.9); color: white; border: 1px solid rgba(255,255,255,0.15); padding: 8px; width: 100%; border-radius: 8px; outline: none; box-sizing: border-box; cursor: pointer;">
+        <input type="text" id="adminBanName" class="cheat-input" placeholder="Engellenecek İsim"
+          style="margin-bottom: 8px;" />
+        <select id="adminBanDuration" class="cheat-input"
+          style="margin-bottom: 8px; background: rgba(10,10,26,0.9); color: white; border: 1px solid rgba(255,255,255,0.15); padding: 8px; width: 100%; border-radius: 8px; outline: none; box-sizing: border-box; cursor: pointer;">
           <option value="1">1 Gün (24 Saat)</option>
           <option value="3">3 Gün</option>
           <option value="7">1 Hafta</option>
           <option value="30">1 Ay</option>
           <option value="forever" selected>Süresiz (Kalıcı Ban)</option>
         </select>
-        <button class="overlay-btn secondary-btn" id="adminBanBtn" style="margin-top: 10px; width: 100%; background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border: none; font-weight: 600;">
+        <button class="overlay-btn secondary-btn" id="adminBanBtn"
+          style="margin-top: 10px; width: 100%; background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border: none; font-weight: 600;">
           <i class="fas fa-gavel"></i> Oyuncuyu Engelle (Banla)
         </button>
       </div>
@@ -388,18 +416,22 @@
     <div class="overlay-card" style="max-width: 340px; text-align: center;">
       <div class="overlay-emoji"><i class="fas fa-info-circle" style="color: #0ea5e9;"></i></div>
       <h2 class="overlay-title">Bilgi</h2>
-      <p class="overlay-sub" style="font-size: 15px; margin-bottom: 5px;">Hile modu kullandığınız için puan kaydedilmeyecek. Yeniden başlatınız.</p>
+      <p class="overlay-sub" style="font-size: 15px; margin-bottom: 5px;">Hile modu kullandığınız için puan
+        kaydedilmeyecek. Yeniden başlatınız.</p>
       <button class="overlay-btn primary-btn" id="cheatRestartBtn" style="margin-top: 15px;">
         <i class="fas fa-rotate-left"></i> Yeniden Başlat
       </button>
-      <button class="overlay-btn secondary-btn" id="cheatInfoCloseBtn" style="margin-top: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+      <button class="overlay-btn secondary-btn" id="cheatInfoCloseBtn"
+        style="margin-top: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
         <i class="fas fa-times"></i> Kapat
       </button>
     </div>
   </div>
 
   <!-- Floating Cheat Active Icon -->
-  <button id="cheatActiveIcon" class="icon-btn" style="display:none; position:fixed; right:25px; bottom:25px; z-index:99999; background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.6); width:50px; height:50px; border-radius:50%; align-items:center; justify-content:center; border:none; color:white; cursor:pointer; font-size: 20px;" title="Hile Modunu Kapat">
+  <button id="cheatActiveIcon" class="icon-btn"
+    style="display:none; position:fixed; right:25px; bottom:25px; z-index:99999; background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.6); width:50px; height:50px; border-radius:50%; align-items:center; justify-content:center; border:none; color:white; cursor:pointer; font-size: 20px;"
+    title="Hile Modunu Kapat">
     <i class="fas fa-bug"></i>
   </button>
 
@@ -440,7 +472,8 @@
         <i class="fas fa-tools"></i>
       </div>
       <h2 class="maintenance-title">Bakım Çalışması</h2>
-      <p class="maintenance-text" id="maintenanceMessageText">Sunucularımızda bakım çalışması yapılmaktadır. Lütfen daha sonra tekrar deneyiniz.</p>
+      <p class="maintenance-text" id="maintenanceMessageText">Sunucularımızda bakım çalışması yapılmaktadır. Lütfen daha
+        sonra tekrar deneyiniz.</p>
       <div class="maintenance-badge" id="maintenanceEndTimeText">Tahmini Bitiş: --:--</div>
     </div>
   </div>
