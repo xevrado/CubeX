@@ -426,9 +426,17 @@ function generatePieces() {
   const emptyCellsCount = board.flat().filter(cell => cell === null).length;
   const filledCellsCount = BOARD_SIZE * BOARD_SIZE - emptyCellsCount;
   
-  // Tahtadaki blokları tamamen temizleme (Perfect Clear) şansını arttırmak için yeni eşikler belirledik
-  const isLowFullness = (filledCellsCount > 0 && filledCellsCount <= 22);
-  const isUltraLowFullness = (filledCellsCount > 0 && filledCellsCount <= 10);
+  // Satır ve sütun doluluklarını önceden hesapla (performans ve akıllı yerleşim analizi için)
+  let rowCounts = new Array(BOARD_SIZE).fill(0);
+  let colCounts = new Array(BOARD_SIZE).fill(0);
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (board[r][c] !== null) {
+        rowCounts[r]++;
+        colCounts[c]++;
+      }
+    }
+  }
 
   // Her şekil için bir ağırlık hesapla
   const shapeWeights = SHAPES.map(shape => {
@@ -453,47 +461,80 @@ function generatePieces() {
 
     // GICIK PARÇALAR: 1x5, 5x1 ve Artı (Plus) parçaları SADECE tam oturdukları yer varsa gelebilir.
     if (['1x5', '5x1', 'Plus'].includes(shape.name) && !exactMatchFound) {
-      return 0; // Başka türlü asla gelmesin
+      if (emptyCellsCount < 40) return 0; // Tahta yarıdan fazla doluysa asla gelmesin
+      weight *= 0.1; // Boşken bile çok nadir
     }
 
-    if (isUltraLowFullness) {
-      // ÇOK DÜŞÜK DOLULUK MODU: Oyuncunun Perfect Clear yapmasını kolaylaştırmak için sadece en küçük parçaları ver
-      if (['1x1', '1x2', '2x1'].includes(shape.name)) {
-        weight *= 8.0;
-      } else {
-        return 0; // 3'lük ve üzeri parçaları tamamen engelle
-      }
-    } else if (isLowFullness) {
-      // DÜŞÜK DOLULUK MODU: Oyuncuya Perfect Clear yapması için SADECE küçük/yardımcı parçalar ver!
-      if (['1x1', '1x2', '2x1', '1x3', '3x1', 'Corner1', 'Corner2', 'Corner3', 'Corner4'].includes(shape.name)) {
-        weight *= 5.0; // Şanslarını çok arttır
-      } else {
-        return 0; // Diğer hantal parçaları TAMAMEN engelle ki tahtayı temizleyebilsin!
-      }
-    } else {
-      // NORMAL VEYA SIKIŞIK MOD: Zorluk dengesini koru, oyuncuyu boğma
-      if (emptyCellsCount < 12) {
-        if (shape.cells.length >= 5) return 0;
-        if (shape.cells.length === 4) weight *= 0.05; // 4'lükleri aşırı nadir yap
-        if (shape.cells.length <= 2) weight *= 1.5;   // Küçükleri destekle
-      } else if (emptyCellsCount < 20) {
-        if (shape.cells.length >= 5) return 0;
-        if (shape.cells.length === 4) weight *= 0.2;
-      } else if (emptyCellsCount < 28) {
-        if (shape.cells.length >= 5) weight *= 0.2;
-        if (shape.cells.length === 4) weight *= 0.5;
-      }
+    // NORMAL VEYA SIKIŞIK MOD: Zorluk dengesini koru, oyuncuyu boğma
+    if (emptyCellsCount < 12) {
+      if (shape.cells.length >= 5) return 0;
+      if (shape.cells.length === 4) weight *= 0.05; // 4'lükleri aşırı nadir yap
+      if (shape.cells.length <= 2) weight *= 1.5;   // Küçükleri destekle
+    } else if (emptyCellsCount < 20) {
+      if (shape.cells.length >= 5) return 0.05;
+      if (shape.cells.length === 4) weight *= 0.2;
+    } else if (emptyCellsCount < 28) {
+      if (shape.cells.length >= 5) weight *= 0.2;
+      if (shape.cells.length === 4) weight *= 0.5;
     }
 
-    // Hole match bonuslarını ekle
+    // Hole match (Tam Uyumluluk) bonuslarını ekle
     if (exactMatchFound) {
-      weight += 18.0; 
-    } else {
-      for (const cluster of clusters) {
-        if (cluster.length > shape.cells.length && cluster.length <= 9) {
-          weight += 1.8;
+      weight += 20.0; 
+    }
+
+    // AKILLI SİSTEM: Parçanın tahtaya ne kadar mükemmel oturduğunu (Compatibility) hesapla
+    let maxCompatibility = 0;
+    let clearsLine = false;
+
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (canPlace(normalizedShape, r, c)) {
+          let touches = 0;
+          let lines = 0;
+          let tempRowFills = [...rowCounts];
+          let tempColFills = [...colCounts];
+
+          for (const [dr, dc] of normalizedShape) {
+            const nr = r + dr;
+            const nc = c + dc;
+            // Etrafındaki bloklara veya duvara değme (snug fit)
+            if (nr === 0 || board[nr - 1][nc] !== null) touches++;
+            if (nr === BOARD_SIZE - 1 || board[nr + 1][nc] !== null) touches++;
+            if (nc === 0 || board[nr][nc - 1] !== null) touches++;
+            if (nc === BOARD_SIZE - 1 || board[nr][nc + 1] !== null) touches++;
+            
+            tempRowFills[nr]++;
+            tempColFills[nc]++;
+          }
+          
+          for (let i = 0; i < BOARD_SIZE; i++) {
+            if (tempRowFills[i] === BOARD_SIZE) lines++;
+            if (tempColFills[i] === BOARD_SIZE) lines++;
+          }
+          
+          if (lines > 0) clearsLine = true;
+          
+          // Her temas +1 puan, her kırılan satır/sütun +15 puan
+          let placementScore = touches + (lines * 15);
+          if (placementScore > maxCompatibility) {
+            maxCompatibility = placementScore;
+          }
         }
       }
+    }
+
+    // Uyum (compatibility) bonusu: Uyumlu parçaların gelme ihtimalini ciddi oranda artırır
+    weight += (maxCompatibility * 0.4);
+
+    // PERFECT CLEAR ASİSTANI (%20 blok kalınca)
+    // Tahtada 14 veya daha az blok kaldıysa, tam uyumlu ve tahtayı tamamen/kısmen temizleyecek parçalara öncelik ver.
+    if (filledCellsCount > 0 && filledCellsCount <= 14) {
+      if (clearsLine) {
+        weight += 40.0; // Temizleyici parçaya muazzam bonus
+      }
+      // Not: Küçük parçaları zorunlu kılan eski kısıtlamayı kaldırdık. 
+      // Böylece perfect clear sonrası boş tahtada sadece küçük parçaların gelmesi sorunu çözüldü.
     }
 
     // 2. Big Shape Logic: Seviye arttıkça büyük parçalara bonus ver (eski mantık korunuyor)
@@ -508,7 +549,7 @@ function generatePieces() {
       weight *= 0.2;
     }
 
-    return weight;
+    return Math.max(0, weight);
   });
 
   const pickSmart = () => {
