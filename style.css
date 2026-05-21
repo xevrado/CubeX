@@ -1326,6 +1326,19 @@ body::before {
 }
 
 /* Slide viewport: yatay kaydırılan içerik kabı */
+.leaderboard-security-note {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.1);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: center;
+}
+
 .lb-viewport {
   width: 100%;
   margin-top: 10px;

@@ -1,6 +1,6 @@
 {
   "name": "cubex",
-  "version": "1.5.2.5",
+  "version": "1.5.2.6",
   "description": "CubeX – Puzzle Game",
   "scripts": {
     "build": "node sync.js",
