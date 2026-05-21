@@ -1,9 +1,9 @@
-const CACHE_NAME = 'cubex-v1.5.2.0-p1779388400557';
+const CACHE_NAME = 'cubex-v1.5.2.1-p1779388861077';
 const ASSETS = [
   './',
   'index.html',
-  'style.css?v=1.5.2.0',
-  'game.js?v=1.5.2.0',
+  'style.css?v=1.5.2.1',
+  'game.js?v=1.5.2.1',
   'manifest.json',
   'update.json',
   'icon-192.png',
