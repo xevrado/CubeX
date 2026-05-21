@@ -1684,6 +1684,29 @@ if (closeLeaderboardBtn) {
 const SUPABASE_URL = "https://wrdlbqhlszqskhbignot.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyZGxicWhsc3pxc2toYmlnbm90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMjkxMzEsImV4cCI6MjA5NDYwNTEzMX0.WcTwqQVH3hkHyIpNwwXxY9oKcdcF0eW6fcChvSAZKq4";
 
+const LEADERBOARD_READ_ONLY_MODE = true;
+
+function isSupabaseScoreWrite(input, init = {}) {
+  const rawUrl = typeof input === 'string' ? input : (input && input.url);
+  if (!rawUrl || !rawUrl.startsWith(`${SUPABASE_URL}/rest/v1/scores`)) return false;
+  const method = (init.method || (input && input.method) || 'GET').toUpperCase();
+  return !['GET', 'HEAD', 'OPTIONS'].includes(method);
+}
+
+if (LEADERBOARD_READ_ONLY_MODE) {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = function guardedFetch(input, init = {}) {
+    if (isSupabaseScoreWrite(input, init)) {
+      console.warn('Leaderboard write blocked in read-only security mode.');
+      return Promise.resolve(new Response(
+        JSON.stringify({ error: 'leaderboard_read_only' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      ));
+    }
+    return originalFetch(input, init);
+  };
+}
+
 // ---- Device, IP-based Account Sync & Anti-Duplicate Name Logic ----
 let leaderboardObserver = null;
 
@@ -2344,6 +2367,11 @@ function updateStickySelfRankVisibility() {
 }
 
 function submitScore(pName, finalScore, silent = false) {
+  if (LEADERBOARD_READ_ONLY_MODE) {
+    console.warn('Score submission skipped: leaderboard is in read-only security mode.');
+    return Promise.resolve(false);
+  }
+
   // Engelli (Ban) kontrolü - Çift Katman Güvenlik (Fail-Safe)
   return fetch(`${SUPABASE_URL}/rest/v1/scores?name=like.banned:${encodeURIComponent(pName)}:%25&select=name`, {
     headers: {
@@ -2456,6 +2484,10 @@ function submitScore(pName, finalScore, silent = false) {
 
 function deleteActiveScore(pName) {
   if (!pName) return Promise.resolve();
+  if (LEADERBOARD_READ_ONLY_MODE) {
+    console.warn('Active score reset skipped: leaderboard is in read-only security mode.');
+    return Promise.resolve();
+  }
   // Aktif (anlık) skoru sıfırla; best_score (tüm zamanlar) korunsun.
   return fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${encodeURIComponent(pName)}`, {
     method: 'PATCH',
@@ -2783,11 +2815,9 @@ if (cheatSubmit && cheatCancel && cheatInput) {
         cheatInput.value = '';
         alert("Bakım modu başarıyla atlatıldı! Kod tekrar yazılırsa kurucu paneli açılacaktır.");
       } else {
-        // Bakım yoksa veya zaten atlatıldıysa: Doğrudan kurucu paneli aç
         document.getElementById('cheatOverlay').classList.remove('active');
         cheatInput.value = '';
-        const adminOverlay = document.getElementById('adminOverlay');
-        if (adminOverlay) adminOverlay.classList.add('active');
+        alert("Kurucu paneli güvenlik nedeniyle bu sürümde kapatıldı. Yönetim işlemlerini Supabase panelinden yapın.");
       }
     } else {
       alert("Hatalı kod.");
