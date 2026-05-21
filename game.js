@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.5.2.1"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.5.2.2"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -1457,6 +1457,14 @@ function initApp() {
       return;
     }
 
+    bootstrapApp();
+  });
+}
+
+function bootstrapApp() {
+    if (appBootstrapped) return;
+    appBootstrapped = true;
+
     createParticles();
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -1571,7 +1579,6 @@ function initApp() {
     }
 
     initIOSInstallPrompt();
-  });
 }
 
 function initIOSInstallPrompt() {
@@ -2613,6 +2620,13 @@ function loadLeaderboard() {
   const allTimeListEl = document.getElementById('leaderboardListAllTime');
   if (!liveListEl || !allTimeListEl) return;
 
+  if (!LEADERBOARD_CONFIGURED) {
+    const message = '<div class="leaderboard-loading">Liderlik tablosu su anda yapilandirilmadi.</div>';
+    liveListEl.innerHTML = message;
+    allTimeListEl.innerHTML = message;
+    return;
+  }
+
   liveListEl.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
   allTimeListEl.innerHTML = '<div class="leaderboard-loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
   const stickySelfRank = document.getElementById('stickySelfRank');
@@ -2695,6 +2709,7 @@ let stealthCheatActive = localStorage.getItem('cubex_stealthCheat') === 'true';
 let cheatMode = localStorage.getItem('cubex_stealthCheat') === 'true';
 let cheatUsedInThisGame = false;
 let maintenanceBypassed = false;
+let appBootstrapped = false;
 
 function handleCheatTap(clientX, clientY) {
   const w = window.innerWidth;
@@ -2816,6 +2831,7 @@ if (cheatSubmit && cheatCancel && cheatInput) {
         maintenanceOverlay.classList.remove('active');
         document.getElementById('cheatOverlay').classList.remove('active');
         cheatInput.value = '';
+        bootstrapApp();
         alert("Bakım modu başarıyla atlatıldı.");
       } else {
         document.getElementById('cheatOverlay').classList.remove('active');

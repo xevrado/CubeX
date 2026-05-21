@@ -33,17 +33,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build web files
+        run: npm run build
+
       - name: Create runtime config
         run: |
-          cat > config.js <<'EOF'
+          cat > www/config.js <<'EOF'
           window.CUBEX_CONFIG = {
             SUPABASE_URL: '${{ secrets.CUBEX_SUPABASE_URL }}',
             SUPABASE_ANON_KEY: '${{ secrets.CUBEX_SUPABASE_ANON_KEY }}'
           };
           EOF
-
-      - name: Build web files
-        run: npm run build
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
