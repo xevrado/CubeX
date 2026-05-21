@@ -46,7 +46,8 @@ try {
     'icon-512.png',
     'update.json',
     'sw.js',
-    'version.txt'
+    'version.txt',
+    'config.js'
   ];
   for (const file of filesToCopy) {
     if (fs.existsSync(`./${file}`)) {

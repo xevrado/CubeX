@@ -1628,7 +1628,7 @@ body::before {
 }
 
 /* Ensure Developer and Founder overlays appear on top of Maintenance overlay */
-#cheatOverlay, #adminOverlay {
+#cheatOverlay {
   z-index: 20000 !important;
 }
 

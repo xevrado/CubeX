@@ -51,3 +51,5 @@ where lower(name) = lower('Emin');
 - The Supabase `anon` key is allowed to be public, but only if RLS policies protect the tables.
 - Never put the Supabase `service_role` key in GitHub, frontend JavaScript, APK assets, or any public file.
 - Admin actions and verified score submission need a server-side endpoint or Supabase Edge Function. The browser cannot be trusted to prove a score is real.
+- Because the previous values were already committed to GitHub, treat them as exposed. Rotate Supabase keys/JWT secret after RLS is locked down, then update GitHub Actions secrets `CUBEX_SUPABASE_URL` and `CUBEX_SUPABASE_ANON_KEY`.
+- Runtime config belongs in `config.js`. That file is ignored by git; use `config.example.js` as the template.
