@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.5.2.4"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.5.2.5"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -2541,10 +2541,18 @@ function deleteActiveScore(pName) {
 // ---- Leaderboard tab state ----
 let activeLbTab = 'live'; // 'live' | 'alltime'
 
+function setLeaderboardMessage(listEl, message) {
+  listEl.replaceChildren();
+  const messageEl = document.createElement('div');
+  messageEl.className = 'leaderboard-loading';
+  messageEl.textContent = message;
+  listEl.appendChild(messageEl);
+}
+
 function renderLeaderboardList(listEl, data, playerName, scoreField) {
-  listEl.innerHTML = '';
+  listEl.replaceChildren();
   if (!data || data.length === 0) {
-    listEl.innerHTML = '<div class="leaderboard-loading">Henüz hiç skor yok! İlk sen ol!</div>';
+    setLeaderboardMessage(listEl, 'Henuz hic skor yok! Ilk sen ol!');
     return;
   }
   data.forEach((itemData, index) => {
@@ -2560,19 +2568,27 @@ function renderLeaderboardList(listEl, data, playerName, scoreField) {
     const item = document.createElement('div');
     item.className = `lb-item ${rankClass}`;
     if (isSelf) {
-      // self item id sekmeye özgü olur ki observer doğru elemana baksın
+      // self item id sekmeye ozgu olur ki observer dogru elemana baksin
       item.dataset.selfItem = '1';
     }
-    const scoreVal = itemData[scoreField] != null ? itemData[scoreField] : 0;
-    item.innerHTML = `
-      <span class="lb-rank">${rank}</span>
-      <span class="lb-name">${itemData.name}</span>
-      <span class="lb-score">${scoreVal}</span>
-    `;
+
+    const scoreVal = Number.isFinite(Number(itemData[scoreField])) ? Number(itemData[scoreField]) : 0;
+    const rankEl = document.createElement('span');
+    rankEl.className = 'lb-rank';
+    rankEl.textContent = String(rank);
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'lb-name';
+    nameEl.textContent = String(itemData.name || '').slice(0, 32);
+
+    const scoreEl = document.createElement('span');
+    scoreEl.className = 'lb-score';
+    scoreEl.textContent = String(scoreVal);
+
+    item.append(rankEl, nameEl, scoreEl);
     listEl.appendChild(item);
   });
 }
-
 function updateSelfRankSticky(playerName, scoreField, listEl) {
   const stickySelfRank = document.getElementById('stickySelfRank');
   window.selfRank = null;
@@ -2636,9 +2652,8 @@ function loadLeaderboard() {
   if (!liveListEl || !allTimeListEl) return;
 
   if (!LEADERBOARD_CONFIGURED) {
-    const message = '<div class="leaderboard-loading">Liderlik tablosu su anda yapilandirilmadi.</div>';
-    liveListEl.innerHTML = message;
-    allTimeListEl.innerHTML = message;
+    setLeaderboardMessage(liveListEl, 'Liderlik tablosu su anda yapilandirilmadi.');
+    setLeaderboardMessage(allTimeListEl, 'Liderlik tablosu su anda yapilandirilmadi.');
     return;
   }
 
@@ -2660,7 +2675,7 @@ function loadLeaderboard() {
     .then(data => renderLeaderboardList(liveListEl, data, playerName, 'score'))
     .catch(e => {
       console.error(e);
-      liveListEl.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
+      setLeaderboardMessage(liveListEl, 'Skorlar yuklenemedi. Internetini kontrol et.');
     });
 
   // Tüm zamanlar sekmesi (best_score; >= 1000)
@@ -2669,7 +2684,7 @@ function loadLeaderboard() {
     .then(data => renderLeaderboardList(allTimeListEl, data, playerName, 'best_score'))
     .catch(e => {
       console.error(e);
-      allTimeListEl.innerHTML = '<div class="leaderboard-loading">Skorlar yüklenemedi. İnternetini kontrol et.</div>';
+      setLeaderboardMessage(allTimeListEl, 'Skorlar yuklenemedi. Internetini kontrol et.');
     });
 
   // Liste yüklendikten sonra aktif sekmeye göre sticky self-rank güncelle
@@ -2921,4 +2936,6 @@ function handleBoardClickForCheat(e) {
     }
   }
 }
+
+
 
