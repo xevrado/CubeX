@@ -1450,8 +1450,12 @@ function checkMaintenance() {
 }
 
 function initApp() {
-  checkMaintenance().then(() => {
+  checkMaintenance().then((isMaintenance) => {
     renderVersionDisplay();
+
+    if (isMaintenance) {
+      return;
+    }
 
     createParticles();
 
