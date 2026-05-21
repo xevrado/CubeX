@@ -30,12 +30,22 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Create runtime config
+        run: |
+          cat > config.js <<'EOF'
+          window.CUBEX_CONFIG = {
+            SUPABASE_URL: '${{ secrets.CUBEX_SUPABASE_URL }}',
+            SUPABASE_ANON_KEY: '${{ secrets.CUBEX_SUPABASE_ANON_KEY }}'
+          };
+          EOF
+
       - name: Copy web files to www
         run: |
           mkdir -p www
           cp index.html www/
           cp style.css www/
           cp game.js www/
+          cp config.js www/
           cp manifest.json www/
 
       - name: Sync Capacitor

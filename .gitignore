@@ -8,3 +8,9 @@ android/local.properties
 *.aab
 .idea/
 *.iml
+config.js
+www/config.js
+.env
+.env.*
+!.env.example
+extracted_step*.txt
