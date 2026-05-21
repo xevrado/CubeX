@@ -2684,9 +2684,149 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ---- Production cheat/admin controls disabled ----
-let cheatMode = false;
+// ---- Developer Mode Logic ----
+let cheatStage = 0;
+let trCount = 0;
+let blCount = 0;
+let brCount = 0;
+let brTimer = null;
+let cheatTimer = null;
+let stealthCheatActive = localStorage.getItem('cubex_stealthCheat') === 'true';
+let cheatMode = localStorage.getItem('cubex_stealthCheat') === 'true';
 let cheatUsedInThisGame = false;
+let maintenanceBypassed = false;
+
+function handleCheatTap(clientX, clientY) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  const isBottomRight = clientX > w - 80 && clientY > h - 80;
+  if (stealthCheatActive && isBottomRight) {
+    brCount++;
+    if (brTimer) clearTimeout(brTimer);
+    brTimer = setTimeout(() => {
+      brCount = 0;
+    }, 3000);
+
+    if (brCount === 7) {
+      clearTimeout(brTimer);
+      brCount = 0;
+      stealthCheatActive = false;
+      cheatMode = false;
+      localStorage.removeItem('cubex_stealthCheat');
+      alert("Gizli geliştirici modu kapatıldı.");
+      if (typeof newGame === 'function') newGame();
+    }
+    return;
+  }
+
+  const isTopRight = clientX > w - 80 && clientY < 80;
+  const isBottomLeft = clientX < 80 && clientY > h - 80;
+
+  if (cheatStage === 0 && isTopRight) {
+    trCount++;
+    if (trCount === 7) {
+      cheatStage = 1;
+      cheatTimer = setTimeout(() => {
+        cheatStage = 0;
+        trCount = 0;
+        blCount = 0;
+      }, 7000);
+    }
+  } else if (cheatStage === 1 && isBottomLeft) {
+    blCount++;
+    if (blCount === 7) {
+      clearTimeout(cheatTimer);
+      cheatStage = 0;
+      trCount = 0;
+      blCount = 0;
+      showCheatDialog();
+    }
+  }
+}
+
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 0) {
+    handleCheatTap(e.touches[0].clientX, e.touches[0].clientY);
+  }
+});
+
+document.addEventListener('mousedown', (e) => {
+  handleCheatTap(e.clientX, e.clientY);
+});
+
+function showCheatDialog() {
+  const overlay = document.getElementById('cheatOverlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+function _secHash(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+const cheatSubmit = document.getElementById('cheatSubmit');
+const cheatCancel = document.getElementById('cheatCancel');
+const cheatInput = document.getElementById('cheatInput');
+
+if (cheatSubmit && cheatCancel && cheatInput) {
+  cheatCancel.addEventListener('click', () => {
+    document.getElementById('cheatOverlay').classList.remove('active');
+    cheatInput.value = '';
+    sfxClick();
+  });
+
+  cheatSubmit.addEventListener('click', () => {
+    sfxClick();
+    const code = cheatInput.value.trim();
+    const hashed = _secHash(code);
+
+    if (hashed === '6kf0nm') {
+      if (stealthCheatActive) {
+        stealthCheatActive = false;
+        cheatMode = false;
+        localStorage.removeItem('cubex_stealthCheat');
+        alert("Gizli geliştirici modu kapatıldı.");
+      } else {
+        stealthCheatActive = true;
+        cheatMode = true;
+        localStorage.setItem('cubex_stealthCheat', 'true');
+        alert("Gizli geliştirici modu aktif hale getirildi.");
+      }
+      cheatUsedInThisGame = false;
+      document.getElementById('cheatOverlay').classList.remove('active');
+      cheatInput.value = '';
+    } else if (hashed === '4bmbzz' || code.toLowerCase() === 'hilex') {
+      cheatMode = true;
+      cheatUsedInThisGame = true;
+      document.getElementById('cheatOverlay').classList.remove('active');
+      cheatInput.value = '';
+
+      const cheatIcon = document.getElementById('cheatActiveIcon');
+      if (cheatIcon) cheatIcon.style.setProperty('display', 'flex', 'important');
+
+      alert("Geliştirici Modu Aktif!\nArtık tahtadaki herhangi bir bloğa tıklayarak onu yok edebilirsin!");
+    } else if (hashed === 'rrwx6m') {
+      const maintenanceOverlay = document.getElementById('maintenanceOverlay');
+      if (maintenanceOverlay && maintenanceOverlay.classList.contains('active') && !maintenanceBypassed) {
+        maintenanceBypassed = true;
+        maintenanceOverlay.classList.remove('active');
+        document.getElementById('cheatOverlay').classList.remove('active');
+        cheatInput.value = '';
+        alert("Bakım modu başarıyla atlatıldı.");
+      } else {
+        document.getElementById('cheatOverlay').classList.remove('active');
+        cheatInput.value = '';
+        alert("Kurucu veritabanı paneli güvenlik nedeniyle kapalı. Yönetim işlemlerini Supabase panelinden yapın.");
+      }
+    } else {
+      alert("Hatalı kod.");
+    }
+  });
+}
 
 // Cheat Disable / Icon Logic
 const cheatActiveIcon = document.getElementById('cheatActiveIcon');

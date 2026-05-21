@@ -320,7 +320,27 @@
     </div>
   </div>
 
-  <!-- Cheat/admin controls are intentionally excluded from production builds. -->
+  <!-- Developer Dialog -->
+  <div class="overlay" id="cheatOverlay">
+    <div class="overlay-card" style="max-width: 320px; text-align: center;">
+      <div class="overlay-emoji"><i class="fas fa-terminal" style="color: #0ea5e9;"></i></div>
+      <h2 class="overlay-title">Geliştirici Bölümü</h2>
+      <p class="overlay-sub">Geliştirici kodunu girin</p>
+      <input type="text" id="cheatInput" class="cheat-input" placeholder="Kod" autocomplete="off" autocorrect="off"
+        autocapitalize="off" spellcheck="false" />
+      <div style="display: flex; gap: 12px; margin-top: 18px;">
+        <button class="overlay-btn secondary-btn" id="cheatCancel"
+          style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+          İptal
+        </button>
+        <button class="overlay-btn primary-btn" id="cheatSubmit" style="flex:1;">
+          Onayla
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin database controls are intentionally excluded from production builds. -->
 
   <!-- Cheat Disable Info Overlay -->
   <div class="overlay" id="cheatInfoOverlay">
