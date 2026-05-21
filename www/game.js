@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.5.2.3"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.5.2.4"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -1693,8 +1693,23 @@ if (closeLeaderboardBtn) {
 }
 
 const CUBEX_CONFIG = window.CUBEX_CONFIG || {};
-const SUPABASE_URL = CUBEX_CONFIG.SUPABASE_URL || '';
+function resolveSupabaseUrl(rawUrl, anonKey) {
+  if (rawUrl && /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(rawUrl)) {
+    return rawUrl;
+  }
+
+  try {
+    const payload = JSON.parse(atob(String(anonKey || '').split('.')[1] || ''));
+    if (payload && /^[a-z0-9-]+$/i.test(payload.ref)) {
+      return `https://${payload.ref}.supabase.co`;
+    }
+  } catch (_) { }
+
+  return '';
+}
+
 const SUPABASE_KEY = CUBEX_CONFIG.SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = resolveSupabaseUrl(CUBEX_CONFIG.SUPABASE_URL || '', SUPABASE_KEY);
 const LEADERBOARD_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
 const LEADERBOARD_READ_ONLY_MODE = true;
