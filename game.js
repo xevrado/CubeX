@@ -3,7 +3,7 @@
    ========================================= */
 
 // ---- Version (Android APK Update Check) ----
-let APP_VERSION = "1.5.2.6"; // Bu değer sync.js tarafından otomatik güncellenir
+let APP_VERSION = "1.5.2.7"; // Bu değer sync.js tarafından otomatik güncellenir
 // ---- Constants ----
 const BOARD_SIZE = 8;
 const COLORS = 8; // color-0 … color-7
@@ -97,6 +97,8 @@ let gameActive = false;  // Aktif bir oyun var mı?
 let hasSubmittedThisGame = false; // Bu oyunda skor veritabanına başarıyla yüklendi mi?
 let lastSubmitTime = 0;
 let lastSubmittedScoreVal = 0;
+const GAME_STATE_KEY = 'cubex_gameState';
+const GAME_STATE_BACKUP_KEY = 'cubex_gameState_backup';
 
 // ---- Audio (Web Audio API — tiny synth) ----
 let audioCtx = null;
@@ -978,6 +980,7 @@ function onDragEnd(e) {
 
     // Check if all 3 used → new set
     if (currentPieces.every(p => p.used)) {
+      saveGameState();
       setTimeout(() => {
         generatePieces();
         renderTray();
@@ -1223,9 +1226,12 @@ function saveGameState() {
         used: p.used,
         name: p.name
       })),
-      gameActive: gameActive
+      gameActive: gameActive,
+      savedAt: Date.now()
     };
-    localStorage.setItem('cubex_gameState', JSON.stringify(state));
+    const serialized = JSON.stringify(state);
+    localStorage.setItem(GAME_STATE_KEY, serialized);
+    localStorage.setItem(GAME_STATE_BACKUP_KEY, serialized);
   } catch (e) {
     console.error('Game state save error:', e);
   }
@@ -1233,7 +1239,7 @@ function saveGameState() {
 
 function loadGameState() {
   try {
-    const saved = localStorage.getItem('cubex_gameState');
+    const saved = localStorage.getItem(GAME_STATE_KEY) || localStorage.getItem(GAME_STATE_BACKUP_KEY);
     if (!saved) return false;
 
     const state = JSON.parse(saved);
@@ -1247,6 +1253,9 @@ function loadGameState() {
     level = state.level || 1;
     combo = state.combo || 0;
     currentPieces = state.currentPieces || [];
+    if (currentPieces.length === 0 || currentPieces.every(p => p.used)) {
+      generatePieces();
+    }
     gameActive = true;
     hasSubmittedThisGame = score >= 1000; // Yüklenen skora göre ata
 
@@ -1264,6 +1273,7 @@ function loadGameState() {
     renderBoard();
     renderTray();
     updateScoreProgress();
+    saveGameState();
 
     return true;
   } catch (e) {
@@ -1273,7 +1283,8 @@ function loadGameState() {
 }
 
 function clearGameState() {
-  localStorage.removeItem('cubex_gameState');
+  localStorage.removeItem(GAME_STATE_KEY);
+  localStorage.removeItem(GAME_STATE_BACKUP_KEY);
   gameActive = false;
 }
 
@@ -1345,6 +1356,25 @@ function preventScrollDuringDrag(e) {
 window.addEventListener('resize', () => {
   renderBoard();
 });
+
+function persistActiveGameBeforeSuspend() {
+  if (gameActive) {
+    saveGameState();
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    persistActiveGameBeforeSuspend();
+  }
+});
+
+window.addEventListener('pagehide', persistActiveGameBeforeSuspend);
+window.addEventListener('beforeunload', persistActiveGameBeforeSuspend);
+
+if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+  window.Capacitor.Plugins.App.addListener('pause', persistActiveGameBeforeSuspend);
+}
 
 // ---- Custom Confirm Dialog ----
 function showConfirm(message, onYes, onNo, yesText = "Evet", noText = "Hayır") {
@@ -1479,10 +1509,10 @@ function bootstrapApp() {
     if (menuBestDisplay) menuBestDisplay.textContent = bestScore;
 
     // Kaydedilmiş oyun var mı kontrol et
-    const hasSavedGame = !!localStorage.getItem('cubex_gameState');
+    const hasSavedGame = !!(localStorage.getItem(GAME_STATE_KEY) || localStorage.getItem(GAME_STATE_BACKUP_KEY));
     if (hasSavedGame) {
       try {
-        const saved = JSON.parse(localStorage.getItem('cubex_gameState'));
+        const saved = JSON.parse(localStorage.getItem(GAME_STATE_KEY) || localStorage.getItem(GAME_STATE_BACKUP_KEY));
         if (saved && saved.gameActive) gameActive = true;
       } catch (e) { }
     }
@@ -1536,7 +1566,7 @@ function bootstrapApp() {
         if (pNameForCleanup) {
           let savedActiveScore = 0;
           try {
-            const savedRaw = localStorage.getItem('cubex_gameState');
+            const savedRaw = localStorage.getItem(GAME_STATE_KEY) || localStorage.getItem(GAME_STATE_BACKUP_KEY);
             if (savedRaw) {
               const savedObj = JSON.parse(savedRaw);
               if (savedObj && typeof savedObj.score === 'number') {
