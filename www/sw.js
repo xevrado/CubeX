@@ -1,9 +1,9 @@
-const CACHE_NAME = 'cubex-v1.5.2.0-p1779261905822';
+const CACHE_NAME = 'cubex-v1.4.5.0-p1779127954971';
 const ASSETS = [
   './',
   'index.html',
-  'style.css?v=1.5.2.0',
-  'game.js?v=1.5.2.0',
+  'style.css?v=1.4.5.0',
+  'game.js?v=1.4.5.0',
   'manifest.json',
   'update.json',
   'icon-192.png',
@@ -35,9 +35,6 @@ self.addEventListener('activate', event => {
 // Fetch: Stale-while-revalidate
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-  
-  // Supabase API isteklerini asla cache'leme (Gerçek zamanlı liderlik tablosu doğruluğu için)
-  if (event.request.url.includes('supabase.co')) return;
   
   event.respondWith(
     caches.open(CACHE_NAME).then(cache => {
